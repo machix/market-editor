@@ -9,6 +9,14 @@ export default function configureStore(initialState = {}) {
     baseURL: process.env.REACT_APP_API_BASE_URL,
     responseType: 'json'
   })
+
+  const authToken = localStorage.getItem('authToken')
+  if (authToken) {
+      client.defaults.headers.common['Authorization'] = `JWT ${authToken}`
+  } else {
+    console.log('Error: No authentication token found!')
+  }
+
   const enhancers = []
   const middleware = [
     thunk,

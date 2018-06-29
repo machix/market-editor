@@ -98,6 +98,7 @@ class DistrictsMap extends Component {
   }
 
   render() {
+    const { center } = this.props
     const {
       infoWindowEditMode,
       showInfoWindow,
@@ -113,18 +114,16 @@ class DistrictsMap extends Component {
       <div className="App">
         <GoogleMap
           ref={this.mapRef}
-          defaultZoom={13}
-          defaultCenter={{ lat: 37.7833918, lng: -122.4102013 }}
+          defaultZoom={10}
+          center={center}
         >
           <DrawingManager
-            defaultDrawingMode={window.google.maps.drawing.OverlayType.POLYGON}
             defaultOptions={{
               drawingControl: true,
               drawingControlOptions: {
                 position: window.google.maps.ControlPosition.TOP_CENTER,
                 drawingModes: [
                   window.google.maps.drawing.OverlayType.POLYGON,
-                  window.google.maps.drawing.OverlayType.RECTANGLE,
                 ],
               },
               polygonOptions: {
