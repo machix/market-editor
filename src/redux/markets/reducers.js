@@ -4,8 +4,8 @@ import {
 
 export const markets = (
   state = {
-    loading: false,
     data: [],
+    loading: false,
   },
   action
 ) => {
@@ -14,6 +14,8 @@ export const markets = (
       return { ...state, loading: true }
     case FETCH_MARKETS.SUCCESS:
       return { data: [...action.payload.data], loading: false }
+    case FETCH_MARKETS.FAIL:
+      return { ...state, loading: false }
     default:
       return state
   }

@@ -1,9 +1,12 @@
 import React, { Component } from 'react'
+import NotificationsSystem from 'reapop'
 import { connect } from 'react-redux'
 import DistrictsMap from '../DistrictsMap'
 import { fetchMarkets } from '../../redux/markets/actions'
 import SideDrawer from '../SideDrawer'
 import { find } from 'lodash'
+import theme from 'reapop-theme-bootstrap'
+import { notify } from 'reapop'
 import styles from './styles.module.less'
 
 
@@ -13,16 +16,27 @@ class App extends Component {
     this.state = {
       selectedMarket: 1,
       center: { lat: 38.189121453125, lng: -121.238344 },
+      loading: false,
     }
   }
 
   componentDidMount() {
-    this.props.fetchMarkets()
+    const authToken = localStorage.getItem('authToken')
+
+    if (!authToken) {
+      this.props.notify({
+        message: 'No authentication token found!',
+        status: 'error',
+        position: 'tl',
+      })
+    }
+
+    this.loadData()
   }
 
   render() {
     const { markets } = this.props
-    const { selectedMarket, center } = this.state
+    const { selectedMarket, center, loading } = this.state
 
     return (
       <div className={styles.app}>
@@ -37,7 +51,9 @@ class App extends Component {
           handleSelectChange={this.handleSelectChange}
           selectedMarket={selectedMarket}
           markets={markets}
+          loading={loading}
         />
+        <NotificationsSystem theme={theme} />
       </div>
     )
   }
@@ -51,6 +67,22 @@ class App extends Component {
       center: { lat: market.center.coordinates[1], lng: market.center.coordinates[0] },
      })
   }
+
+  loadData = () => {
+    this.setState({ loading: true })
+    this.props.fetchMarkets()
+    .then(() => {
+      this.setState({ loading: false })
+    })
+    .catch(error => {
+      this.setState({ loading: false })
+      this.props.notify({
+        message: error.message,
+        status: 'error',
+        position: 'tl',
+      })
+    })
+  }
 }
 
 const mapStateToProps = state => ({
@@ -58,6 +90,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
+  notify,
   fetchMarkets,
 }
 

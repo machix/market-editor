@@ -7,7 +7,6 @@ import rootReducer from './rootReducer'
 export default function configureStore(initialState = {}) {
   const client = axios.create({
     baseURL: process.env.REACT_APP_API_BASE_URL,
-    responseType: 'json'
   })
 
   const authToken = localStorage.getItem('authToken')
@@ -20,7 +19,9 @@ export default function configureStore(initialState = {}) {
   const enhancers = []
   const middleware = [
     thunk,
-    axiosMiddleware(client),
+    axiosMiddleware(client, {
+      onError: ({ error }) => { throw error },
+    }),
   ]
 
   if (process.env.NODE_ENV === 'development') {

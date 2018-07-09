@@ -8,12 +8,18 @@ import MenuItem from '@material-ui/core/MenuItem'
 import FormHelperText from '@material-ui/core/FormHelperText'
 import FormControl from '@material-ui/core/FormControl'
 import { isEmpty } from 'lodash'
+import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
 
 class SideDrawer extends Component {
   render() {
-    const { selectedMarket, markets, handleSelectChange } = this.props
+    const {
+      selectedMarket,
+      markets,
+      handleSelectChange,
+      loading,
+    } = this.props
 
     return (
       <div className={styles.drawer}>
@@ -26,7 +32,7 @@ class SideDrawer extends Component {
           </ListItem>
         </List>
         <Divider />
-        <List>
+        <List className={styles.main}>
           <ListItem>
             <FormControl className={styles.select} disabled={markets.loading}>
               <Select
@@ -42,6 +48,9 @@ class SideDrawer extends Component {
               </Select>
               <FormHelperText>Market</FormHelperText>
             </FormControl>
+          </ListItem>
+          <ListItem classes={{ root: styles.loaderContainer }}>
+            <LoadingCircle loading={loading} />
           </ListItem>
         </List>
       </div>
