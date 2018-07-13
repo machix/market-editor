@@ -11,6 +11,7 @@ import { isEmpty } from 'lodash'
 import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
+import { find } from 'lodash'
 
 class SideDrawer extends Component {
   render() {
@@ -49,11 +50,37 @@ class SideDrawer extends Component {
               <FormHelperText>Market</FormHelperText>
             </FormControl>
           </ListItem>
+          <ListItem>
+            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
+              {this.renderDistrictSelect()}
+              <FormHelperText>District</FormHelperText>
+            </FormControl>
+          </ListItem>
           <ListItem classes={{ root: styles.loaderContainer }}>
             <LoadingCircle loading={loading} />
           </ListItem>
         </List>
       </div>
+    )
+  }
+
+  renderDistrictSelect = () => {
+    const { selectedMarket, markets, selectedDistrict, handleSelectDistrictChange } = this.props
+    const market = find(markets.data, ['id', selectedMarket])
+    const districts = market && market.districts
+
+    return (
+      <Select
+        value={selectedDistrict}
+        onChange={handleSelectDistrictChange}
+        inputProps={{
+          name: 'District',
+        }}
+      >
+        {!isEmpty(districts) && districts.map((district) => (
+          <MenuItem key={district.id} value={district.id}>{district.name}</MenuItem>
+        ))}
+      </Select>
     )
   }
 }

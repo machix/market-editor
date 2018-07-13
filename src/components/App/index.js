@@ -8,13 +8,16 @@ import theme from 'reapop-theme-wybo'
 import { notify } from 'reapop'
 import styles from './styles.module.less'
 import { find } from 'lodash'
+import * as turf from '@turf/turf'
 
 
 class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
+      showInfoWindow: false,
       selectedMarket: 1,
+      selectedDistrict: '',
       center: { lat: 37.7045000000128, lng: -120.89549999995776 },
     }
   }
@@ -35,7 +38,7 @@ class App extends Component {
 
   render() {
     const { markets, market } = this.props
-    const { selectedMarket, center } = this.state
+    const { selectedMarket, selectedDistrict, center, showInfoWindow } = this.state
 
     return (
       <div className={styles.app}>
@@ -46,10 +49,14 @@ class App extends Component {
           mapElement={<div style={{ height: '100%' }} />}
           center={center}
           market={market}
+          showInfoWindow={showInfoWindow}
+          selectedDistrict={selectedDistrict}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
           selectedMarket={selectedMarket}
+          handleSelectDistrictChange={this.handleSelectDistrictChange}
+          selectedDistrict={selectedDistrict}
           markets={markets}
           loading={markets.loading || market.loading}
         />
@@ -78,6 +85,23 @@ class App extends Component {
             })
           }
         })
+      })
+    }
+  }
+
+  handleSelectDistrictChange = (event) => {
+    const selectedDistrict = event.target.value
+    if (selectedDistrict !== this.state.selectedDistrict) {
+      const market = this.props.market
+      const district = find(market.data.districts, ['id', selectedDistrict])
+      console.log(district)
+      const center = turf.center(district.geom)
+      console.log(center)
+
+      this.setState({
+        selectedDistrict,
+        showInfoWindow: true,
+        center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
       })
     }
   }

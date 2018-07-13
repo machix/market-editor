@@ -49,7 +49,7 @@ class MarketsMap extends Component {
         this.map.data.setStyle((feature) => {
           return {
             fillColor: feature.getProperty('color'),
-            fillOpacity: 0.5,
+            fillOpacity: 0.6,
             strokeColor: feature.getProperty('color'),
           }
         })
@@ -99,6 +99,17 @@ class MarketsMap extends Component {
         })
       }
     }
+
+    // if (nextProps.showInfoWindow) {
+    //   this.setState({
+    //     infoWindow: {
+    //       ...this.state.infoWindow,
+    //       show: true,
+    //       lat: this.props.center.lat,
+    //       lng: this.props.center.lng,
+    //     }
+    //   })
+    // }
   }
 
   render() {
@@ -168,7 +179,11 @@ class MarketsMap extends Component {
   renderInfoWindowContent = () => {
     const { selectedInstance, infoWindow } = this.state
     const { market } = this.props
-    const districtId = selectedInstance.getProperty('id')
+
+    let districtId
+    if (selectedInstance) {
+      districtId = selectedInstance.getProperty('id')
+    }
     const district = find(market.data.districts, ['id', districtId])
 
     return (
@@ -265,21 +280,22 @@ class MarketsMap extends Component {
         const currentFeature = find(geoJsonCollection.features, ['properties.id', selectedInstance.getProperty('id')])
         window.f = currentFeature
         window.s = selectedInstance
-        window.c = geoJsonCollection
         turf.featureEach(geoJsonCollection, (feature) => {
-          // if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
-          //   const difference = turf.difference(currentFeature, feature)
-          //   // this.map.data.addGeoJson(difference)
-          //   // here create a Polygon object with new google.maps.LatLng(-34.397, 150.644) and use setGeometry
-          //   const coordinates = []
-          //   difference.geometry.coordinates.forEach(coord => {
-          //     coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
-          //   })
-          //   const polygon = new window.google.maps.Polygon({
-          //     paths: coordinates,
-          //   })
-          //   this.selectedInstance.setGeometry(polygon)
-          // }
+          if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
+            const difference = turf.difference(currentFeature, feature)
+            // this.map.data.addGeoJson(difference)
+            // here create a Polygon object with new google.maps.LatLng(-34.397, 150.644) and use setGeometry
+            const coordinates = []
+            console.log(difference)
+            difference.geometry.coordinates[0].forEach(coord => {
+              coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
+            })
+            window.d = difference
+            window.c = coordinates
+            const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
+            window.p = polygon
+            selectedInstance.setGeometry(polygon)
+          }
         })
       })
     }
