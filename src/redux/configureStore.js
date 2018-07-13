@@ -19,9 +19,7 @@ export default function configureStore(initialState = {}) {
   const enhancers = []
   const middleware = [
     thunk,
-    axiosMiddleware(client, {
-      onError: ({ error }) => { throw error },
-    }),
+    axiosMiddleware(client),
   ]
 
   if (process.env.NODE_ENV === 'development') {

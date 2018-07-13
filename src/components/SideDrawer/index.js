@@ -17,7 +17,7 @@ class SideDrawer extends Component {
     const {
       selectedMarket,
       markets,
-      handleSelectChange,
+      handleSelectMarketChange,
       loading,
     } = this.props
 
@@ -34,10 +34,10 @@ class SideDrawer extends Component {
         <Divider />
         <List className={styles.main}>
           <ListItem>
-            <FormControl className={styles.select} disabled={markets.loading}>
+            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
               <Select
                 value={selectedMarket}
-                onChange={handleSelectChange}
+                onChange={handleSelectMarketChange}
                 inputProps={{
                   name: 'Market',
                 }}
