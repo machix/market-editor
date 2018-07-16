@@ -3,30 +3,20 @@ import {
   withScriptjs,
   withGoogleMap,
   GoogleMap,
-  InfoWindow,
-  Polygon,
 } from 'react-google-maps'
 import { isEmpty, find } from 'lodash'
 import * as turf from '@turf/turf'
 import DrawingManager from 'react-google-maps/lib/components/drawing/DrawingManager'
 import { MAP } from 'react-google-maps/lib/constants'
-import DistrictEditWindow from '../DistrictEditWindow'
+import styles from './styles.module.less'
 
 class MarketsMap extends Component {
   constructor(props) {
     super(props)
     this.initialState = {
-      infoWindow: {
-        editing: false,
-        show: false,
-        lat: null,
-        lng: null,
-      },
       oldGeometry: null,
       features: [],
-      selectedInstance: null,
-      subRegions: [],
-      newSubRegions: [],
+      selectedFeature: null,
     }
 
     this.state = this.initialState
@@ -34,93 +24,96 @@ class MarketsMap extends Component {
 
   componentDidMount() {
     this.map = this.mapRef.context[MAP]
-    window.turf = turf
   }
 
   componentWillReceiveProps(nextProps) {
-    const { market } = nextProps
+    const { market, selectedDistrict } = nextProps
+    const { selectedFeature } = this.state
 
-    if (market.data && market.data.id !== this.props.market.data.id) {
+    // Market Data Changed
+    if (market.data && (market.data.id !== this.props.market.data.id)) {
       const districtsFeatureCollection = this.createFeatureCollection(market.data.districts)
 
       if (districtsFeatureCollection && !isEmpty((districtsFeatureCollection))) {
         this.resetFeatures(districtsFeatureCollection)
 
         this.map.data.setStyle((feature) => {
-          return {
+          return this.createStyle({
             fillColor: feature.getProperty('color'),
-            fillOpacity: 0.6,
+            fillOpacity: 0.5,
             strokeColor: feature.getProperty('color'),
-          }
+            strokeOpacity: 1,
+            strokeWeight: 2,
+          })
         })
 
         this.map.data.addListener('click', (event) => {
-          const { selectedInstance, infoWindow } = this.state
           const feature = event.feature
-          if (selectedInstance && (feature.getProperty('id') !== selectedInstance.getProperty('id'))) {
-            if (infoWindow.editing) {
-              this.handleCancel()
-            }
-            this.setState({
-              selectedInstance: feature,
-              infoWindow: {
-                ...this.state.infoWindow,
-                show: true,
-                editing: false,
-                lat: event.latLng.lat(),
-                lng: event.latLng.lng(),
-              }
-            })
-          } else {
-            this.setState({
-              selectedInstance: feature,
-              infoWindow: {
-                ...this.state.infoWindow,
-                show: true,
-                lat: event.latLng.lat(),
-                lng: event.latLng.lng(),
-              }
-            })
-          }
+          this.clearSelection()
+          this.handleClickFeature(feature)
         })
+      }
 
-        this.map.data.addListener('mouseup', (event) => {
-          const { infoWindow } = this.state
-          if (infoWindow.editing) {
-            this.setState({
-              infoWindow: {
-                ...infoWindow,
-                show: true,
-                lat: event.latLng.lat(),
-                lng: event.latLng.lng(),
-              }
-            })
-          }
+      this.map.addListener('click', () => {
+        this.clearSelection()
+        this.props.handleCancelDone({ closeInfoWindow: true })
+      })
+    }
+
+    // Selected District Changed
+    if (selectedDistrict && (selectedDistrict !== this.props.selectedDistrict)) {
+      if (selectedFeature && this.isFeature(selectedFeature)) {
+        this.map.data.overrideStyle(selectedFeature, {
+          strokeColor: selectedFeature.getProperty('color'),
+          strokeWeight: 2,
+          zIndex: 1,
         })
+        if (this.props.editing) {
+          this.handleCancel()
+        }
+      }
+      const newFeature = this.map.data.getFeatureById(selectedDistrict)
+      this.map.data.overrideStyle(newFeature, {
+        strokeColor: '#3e4444',
+        strokeWeight: 3,
+        zIndex: 2,
+      })
+      this.setState({
+        selectedFeature: newFeature,
+      })
+    }
+
+    if (!this.props.editing && nextProps.editing) {
+      this.handleEdit()
+    }
+
+    if (this.props.editing && !nextProps.editing && !nextProps.saving) {
+      const { selectedFeature } = this.state
+      if (this.isFeature(selectedFeature)) {
+        this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
+        if (this.state.oldGeometry) {
+          selectedFeature.setGeometry(this.state.oldGeometry)
+        }
       }
     }
 
-    // if (nextProps.showInfoWindow) {
-    //   this.setState({
-    //     infoWindow: {
-    //       ...this.state.infoWindow,
-    //       show: true,
-    //       lat: this.props.center.lat,
-    //       lng: this.props.center.lng,
-    //     }
-    //   })
-    // }
+    if (!this.props.canceling && nextProps.canceling) {
+      this.handleCancel()
+    }
+
+    if (!this.props.deleting && nextProps.deleting) {
+      this.handleDelete()
+    }
+
+    if (!this.props.saving && nextProps.saving) {
+      this.handleSave()
+    }
   }
 
   render() {
     const { center } = this.props
 
-    const {
-      infoWindow,
-      subRegions,
-    } = this.state
-
-    const FILL_CAPACITY = 0.6
+    const FILL_CAPACITY = 0.5
     const STROKE_CAPACITY = 1
 
     return (
@@ -140,61 +133,14 @@ class MarketsMap extends Component {
             },
             polygonOptions: {
               editable: true,
+              draggable: true,
               fillOpacity: FILL_CAPACITY,
               strokeOpacity: STROKE_CAPACITY,
             },
           }}
           onPolygonComplete={this.handlePolygonComplete}
         />
-        { subRegions.map((subRegion, index) => {
-            return (
-              <Polygon
-                key={index}
-                editable={true}
-                options={{
-                  strokeColor: subRegion.htmlColor,
-                  strokeOpacity: STROKE_CAPACITY,
-                  fillColor: subRegion.htmlColor,
-                  fillOpacity: FILL_CAPACITY,
-                }}
-                paths={subRegion.polygon.getPath().getArray()}
-              />
-            )
-          })
-        }
-        {infoWindow.show ?
-          <InfoWindow
-            position={{ lat: infoWindow.lat, lng: infoWindow.lng }}
-            zIndex={1}
-            onCloseClick={this.handleInfoWindowCloseClick}
-          >
-            {this.renderInfoWindowContent()}
-          </InfoWindow>
-          : null
-        }
       </GoogleMap>
-    )
-  }
-
-  renderInfoWindowContent = () => {
-    const { selectedInstance, infoWindow } = this.state
-    const { market } = this.props
-
-    let districtId
-    if (selectedInstance) {
-      districtId = selectedInstance.getProperty('id')
-    }
-    const district = find(market.data.districts, ['id', districtId])
-
-    return (
-      <DistrictEditWindow
-        editing={infoWindow.editing}
-        handleEdit={this.handleEdit}
-        handleCancel={this.handleCancel}
-        handleSave={this.handleSave}
-        handleDelete={this.handleDelete}
-        district={district}
-      />
     )
   }
 
@@ -202,10 +148,53 @@ class MarketsMap extends Component {
     this.setState(this.initialState)
   }
 
-  handleInfoWindowCloseClick = () => {
+  handleClickFeature = (feature) => {
+    if (this.isFeature(feature)) {
+      this.props.handleClickFeature(feature)
+      this.map.data.overrideStyle(feature, {
+        strokeColor: '#3e4444',
+        strokeWeight: 3,
+        zIndex: 2,
+      })
+    } else {
+      feature.setOptions({
+        strokeColor: '#3e4444',
+        strokeWeight: 3,
+        zIndex: 2,
+      })
+    }
     this.setState({
-      infoWindow: { ...this.state.infoWindow, show: false }
+      selectedFeature: feature,
     })
+  }
+
+  clearSelection = () => {
+    const { selectedFeature } = this.state
+    if (selectedFeature) {
+      if (this.isFeature(selectedFeature)) {
+        this.map.data.overrideStyle(selectedFeature, {
+          strokeColor: selectedFeature.getProperty('color'),
+          strokeWeight: 2,
+          zIndex: 1,
+        })
+      } else {
+        selectedFeature.setOptions({
+          strokeWeight: 2,
+          zIndex: 1,
+        })
+      }
+    }
+    this.props.clearSelection()
+  }
+
+  createStyle = ({ fillColor, fillOpacity, strokeColor, strokeOpacity, strokeWeight }) => {
+    return {
+      fillColor,
+      fillOpacity,
+      strokeColor,
+      strokeOpacity,
+      strokeWeight,
+    }
   }
 
   handlePolygonComplete = (polygon) => {
@@ -214,110 +203,89 @@ class MarketsMap extends Component {
       fillColor: htmlColor,
       strokeColor: htmlColor,
     })
-
-    const newSubRegion = {
-      htmlColor,
-      polygon,
-    }
-    const newSubRegions = this.state.newSubRegions
-    newSubRegions.push(newSubRegion)
-    this.setState({ newSubRegions })
-    this.showPolygonInfoWindow(polygon)
-
-    window.google.maps.event.addListener(polygon, 'mousedown', (e) => {
-      console.log('polygon clicked', e);
+    this.clearSelection()
+    this.handleClickFeature(polygon)
+    this.showPolygonInfoWindow()
+    window.google.maps.event.addListener(polygon, 'click', () => {
+      this.clearSelection()
+      this.handleClickFeature(polygon)
       this.showPolygonInfoWindow(polygon)
     })
   }
 
-  showPolygonInfoWindow = (polygon) => {
-    const polygonCenter = this.getPolygonCenter(polygon)
-    this.setState({
-      infoWindow: {
-        ...this.state.infoWindow,
-        show: true,
-        lat: polygonCenter.lat(),
-        lng: polygonCenter.lng(),
-      },
-      selectedInstance: polygon,
-    })
+  showPolygonInfoWindow = () => {
+    this.props.showPolygonInfoWindow()
   }
 
   handleEdit = () => {
-      const { selectedInstance } = this.state
-      this.setState({
-        infoWindow: {
-          ...this.state.infoWindow,
-          editing: true,
-        },
-      })
-      if (selectedInstance instanceof window.google.maps.Data.Feature) {
-        this.map.data.overrideStyle(selectedInstance, { editable: true, draggable: true })
-        this.setState({ oldGeometry: selectedInstance.getGeometry() })
+      const { selectedFeature } = this.state
+
+      this.props.handleEdit()
+
+      if (this.isFeature(selectedFeature)) {
+        this.map.data.overrideStyle(selectedFeature, { editable: true, draggable: true })
+        this.setState({ oldGeometry: selectedFeature.getGeometry() })
       }
   }
 
   handleCancel = () => {
-    const { selectedInstance } = this.state
-    if (selectedInstance instanceof window.google.maps.Data.Feature) {
-      this.map.data.overrideStyle(selectedInstance, { editable: false, draggable: false })
-      selectedInstance.setGeometry(this.state.oldGeometry)
-    }
-    this.setState({
-      infoWindow: {
-        ...this.state.infoWindow,
-        editing: false,
-        show: false,
+    const { selectedFeature } = this.state
+    if (this.isFeature(selectedFeature)) {
+      this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
+      if (this.state.oldGeometry) {
+        selectedFeature.setGeometry(this.state.oldGeometry)
       }
-    })
+      this.props.handleCancelDone()
+    } else {
+      selectedFeature.setMap(null)
+      this.props.handleCancelDone({ closeInfoWindow: true })
+    }
   }
 
   handleSave = () => {
-    const { selectedInstance } = this.state
-    if (selectedInstance instanceof window.google.maps.Data.Feature) {
-      this.map.data.overrideStyle(selectedInstance, { editable: false, draggable: false })
+    const { formData } = this.props
+    const { selectedFeature } = this.state
+    console.log(formData)
+    if (this.isFeature(selectedFeature)) {
+      this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
       this.map.data.toGeoJson((geoJsonCollection) => {
-        const currentFeature = find(geoJsonCollection.features, ['properties.id', selectedInstance.getProperty('id')])
-        window.f = currentFeature
-        window.s = selectedInstance
+        const currentFeature = find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
         turf.featureEach(geoJsonCollection, (feature) => {
           if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
             const difference = turf.difference(currentFeature, feature)
-            // this.map.data.addGeoJson(difference)
-            // here create a Polygon object with new google.maps.LatLng(-34.397, 150.644) and use setGeometry
             const coordinates = []
-            console.log(difference)
             difference.geometry.coordinates[0].forEach(coord => {
               coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
             })
-            window.d = difference
-            window.c = coordinates
             const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
-            window.p = polygon
-            selectedInstance.setGeometry(polygon)
+            selectedFeature.setGeometry(polygon)
           }
         })
       })
+      this.props.handleSaveDone()
+    } else {
+      const newFeature = this.map.data.add({
+        geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()])
+      })
+      this.map.data.overrideStyle(newFeature, {
+        editable: false,
+        draggable: false,
+        fillColor: selectedFeature.fillColor,
+        strokeColor: selectedFeature.fillColor,
+        fillOpacity: selectedFeature.fillOpacity,
+      })
+      selectedFeature.setMap(null)
+      this.props.handleSaveDone()
     }
-    this.setState({
-      infoWindow: {
-        ...this.state.infoWindow,
-        editing: false,
-        show: false,
-      }
-    })
   }
 
   handleDelete = () => {
-    const { selectedInstance, infoWindow } = this.state
+    const { selectedFeature } = this.state
 
-    if (selectedInstance instanceof window.google.maps.Data.Feature) {
-      this.map.data.remove(selectedInstance)
+    if (this.isFeature(selectedFeature)) {
+      this.map.data.remove(selectedFeature)
+      this.props.handleDeleteDone()
     }
-
-    this.setState({
-      infoWindow: { ...infoWindow, show: false },
-    })
   }
 
   getPolygonCenter = (polygon) => {
@@ -341,18 +309,9 @@ class MarketsMap extends Component {
           })
         }
       })
-      const featureCollection = turf.featureCollection(collection.map(f => turf.feature(f.geom, { color: f.html_color, id: f.id })))
+      const featureCollection = turf.featureCollection(collection.map(f => turf.feature(f.geom, { color: f.html_color, id: f.id }, { id: f.id })))
       return featureCollection
     }
-  }
-
-  toggleInfoWindow = () => {
-    this.setState({
-      infoWindow: {
-        ...this.state.infoWindow,
-        show: !this.state.infoWindow.show,
-      }
-    })
   }
 
   resetFeatures = (featureCollection) => {
@@ -362,6 +321,8 @@ class MarketsMap extends Component {
     const features = this.map.data.addGeoJson(featureCollection)
     this.setState({ features: [...features] })
   }
+
+  isFeature = (feature) => feature instanceof window.google.maps.Data.Feature
 }
 
 export default withScriptjs(withGoogleMap(MarketsMap))

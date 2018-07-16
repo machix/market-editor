@@ -36,7 +36,7 @@ export function fetchMarket(id) {
     ],
     payload: {
       request: {
-        url:`/v1/region/markets/${id}/?districts_info_only=true&geom=true`
+        url:`/v1/region/markets/${id}/?simplified_geom=true`
       }
     }
   }

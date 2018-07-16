@@ -12,15 +12,28 @@ import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
 import { find } from 'lodash'
+import InfoWindow from '../InfoWindow'
 
 class SideDrawer extends Component {
   render() {
     const {
       selectedMarket,
+      selectedDistrict,
       markets,
+      market,
       handleSelectMarketChange,
+      handleSelectDistrictChange,
       loading,
+      handleEdit,
+      handleCancel,
+      handleSave,
+      handleDelete,
+      editing,
+      showInfoWindow,
     } = this.props
+
+    const districts = market && market.data.districts
+    const district = market && find(market.data.districts, ['id', selectedDistrict])
 
     return (
       <div className={styles.drawer}>
@@ -52,10 +65,19 @@ class SideDrawer extends Component {
           </ListItem>
           <ListItem>
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
-              {this.renderDistrictSelect()}
+              {this.renderDistrictSelect({ selectedDistrict, handleSelectDistrictChange, districts })}
               <FormHelperText>District</FormHelperText>
             </FormControl>
           </ListItem>
+          {(selectedDistrict || showInfoWindow) &&
+            <div style={{ marginTop: '40px' }}>
+              <Divider />
+              <ListItem>
+                {this.renderInfoWindow({ market, district, handleEdit, handleCancel, handleSave, handleDelete, editing, showInfoWindow })}
+              </ListItem>
+              <Divider />
+            </div>
+          }
           <ListItem classes={{ root: styles.loaderContainer }}>
             <LoadingCircle loading={loading} />
           </ListItem>
@@ -64,11 +86,7 @@ class SideDrawer extends Component {
     )
   }
 
-  renderDistrictSelect = () => {
-    const { selectedMarket, markets, selectedDistrict, handleSelectDistrictChange } = this.props
-    const market = find(markets.data, ['id', selectedMarket])
-    const districts = market && market.districts
-
+  renderDistrictSelect = ({ selectedDistrict, handleSelectDistrictChange, districts }) => {
     return (
       <Select
         value={selectedDistrict}
@@ -81,6 +99,30 @@ class SideDrawer extends Component {
           <MenuItem key={district.id} value={district.id}>{district.name}</MenuItem>
         ))}
       </Select>
+    )
+  }
+
+  renderInfoWindow = ({
+    market,
+    district,
+    handleEdit,
+    handleCancel,
+    handleSave,
+    handleDelete,
+    editing,
+    showInfoWindow,
+  }) => {
+    return (
+      <InfoWindow
+        editing={editing}
+        handleEdit={handleEdit}
+        handleCancel={handleCancel}
+        handleSave={handleSave}
+        handleDelete={handleDelete}
+        market={market}
+        district={district}
+        showInfoWindow={showInfoWindow}
+      />
     )
   }
 }

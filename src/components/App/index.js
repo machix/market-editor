@@ -15,9 +15,14 @@ class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      showInfoWindow: false,
       selectedMarket: 1,
       selectedDistrict: '',
+      formData: {},
+      editing: false,
+      canceling: false,
+      saving: false,
+      deleting: false,
+      showInfoWindow: false,
       center: { lat: 37.7045000000128, lng: -120.89549999995776 },
     }
   }
@@ -38,7 +43,17 @@ class App extends Component {
 
   render() {
     const { markets, market } = this.props
-    const { selectedMarket, selectedDistrict, center, showInfoWindow } = this.state
+    const {
+      selectedMarket,
+      selectedDistrict,
+      center,
+      editing,
+      canceling,
+      deleting,
+      saving,
+      formData,
+      showInfoWindow,
+    } = this.state
 
     return (
       <div className={styles.app}>
@@ -49,8 +64,19 @@ class App extends Component {
           mapElement={<div style={{ height: '100%' }} />}
           center={center}
           market={market}
-          showInfoWindow={showInfoWindow}
           selectedDistrict={selectedDistrict}
+          handleEdit={this.handleEdit}
+          handleClickFeature={this.handleClickFeature}
+          clearSelection={this.clearSelection}
+          editing={editing}
+          canceling={canceling}
+          deleting={deleting}
+          saving={saving}
+          formData={formData}
+          handleCancelDone={this.handleCancelDone}
+          handleDeleteDone={this.handleDeleteDone}
+          handleSaveDone={this.handleSaveDone}
+          showPolygonInfoWindow={this.showPolygonInfoWindow}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
@@ -58,7 +84,14 @@ class App extends Component {
           handleSelectDistrictChange={this.handleSelectDistrictChange}
           selectedDistrict={selectedDistrict}
           markets={markets}
+          market={market}
           loading={markets.loading || market.loading}
+          editing={editing}
+          handleEdit={this.handleEdit}
+          handleCancel={this.handleCancel}
+          handleSave={this.handleSave}
+          handleDelete={this.handleDelete}
+          showInfoWindow={showInfoWindow}
         />
         <NotificationsSystem theme={theme} />
       </div>
@@ -94,16 +127,91 @@ class App extends Component {
     if (selectedDistrict !== this.state.selectedDistrict) {
       const market = this.props.market
       const district = find(market.data.districts, ['id', selectedDistrict])
-      console.log(district)
       const center = turf.center(district.geom)
-      console.log(center)
 
       this.setState({
         selectedDistrict,
-        showInfoWindow: true,
         center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
       })
     }
+  }
+
+  clearSelection = () => {
+    this.setState({
+      selectedDistrict: '',
+      editing: false,
+    })
+  }
+
+  handleClickFeature = (feature) => {
+    const featureId = feature.getProperty('id')
+    this.setState({
+      selectedDistrict: featureId,
+    })
+  }
+
+  handleEdit = () => {
+    this.setState({ editing: true })
+  }
+
+  handleCancel = () => {
+    this.setState({
+      editing: false,
+      canceling: true,
+    })
+  }
+
+  handleCancelDone = ({ closeInfoWindow } = {}) => {
+    this.setState({
+      canceling: false,
+      editing: false,
+    })
+    if (closeInfoWindow) {
+      this.setState({ showInfoWindow: false })
+    }
+  }
+
+  handleDelete = () => {
+    this.setState({
+      selectedDistrict: '',
+      editing: false,
+      deleting: true,
+    })
+  }
+
+  handleDeleteDone = () => {
+    this.setState({
+      deleting: false,
+    })
+  }
+
+  handleSave = (formData) => {
+    this.setState({
+      formData,
+    }, () => {
+      this.setState({
+        saving: true,
+        editing: false,
+      })
+    })
+  }
+
+  handleSaveDone = () => {
+    this.setState({
+      saving: false,
+    })
+    this.props.notify({
+      message: 'Your changes have been saved!',
+      status: 'success',
+      position: 'tc',
+    })
+  }
+
+  showPolygonInfoWindow = () => {
+    this.setState({
+      showInfoWindow: true,
+      editing: true,
+    })
   }
 
   loadData = () => {
