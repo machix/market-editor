@@ -38,15 +38,15 @@ class App extends Component {
   }
 
   componentDidMount() {
-    const authToken = localStorage.getItem('authToken')
-
-    if (!authToken) {
-      this.props.notify({
-        message: 'No authentication token found!',
-        status: 'error',
-        position: 'tc',
-      })
-    }
+    // const authToken = localStorage.getItem('authToken')
+    //
+    // if (!authToken) {
+    //   this.props.notify({
+    //     message: 'No authentication token found!',
+    //     status: 'error',
+    //     position: 'tc',
+    //   })
+    // }
 
     this.loadData()
   }

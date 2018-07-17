@@ -5,16 +5,14 @@ import thunk from 'redux-thunk'
 import rootReducer from './rootReducer'
 
 export default function configureStore(initialState = {}) {
-  const client = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL,
-  })
+  const client = axios.create()
 
-  const authToken = localStorage.getItem('authToken')
-  if (authToken) {
-      client.defaults.headers.common['Authorization'] = `JWT ${authToken}`
-  } else {
-    console.log('Error: No authentication token found!')
-  }
+  // const authToken = localStorage.getItem('authToken')
+  // if (authToken) {
+  //     client.defaults.headers.common['Authorization'] = `JWT ${authToken}`
+  // } else {
+  //   console.log('Error: No authentication token found!')
+  // }
 
   const enhancers = []
   const middleware = [
