@@ -27,15 +27,20 @@ class MarketsMap extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    const { market, selectedDistrict } = nextProps
+    const { market, selectedRegion, selectedTool } = nextProps
     const { selectedFeature } = this.state
 
     // Market Data Changed
-    if (market.data && (market.data.id !== this.props.market.data.id)) {
-      const districtsFeatureCollection = this.createFeatureCollection(market.data.districts)
+    if (market.data && ((market.data.id !== this.props.market.data.id) || (selectedTool !== this.props.selectedTool))) {
+      let regionsFeatureCollection
+      if (selectedTool === 'districtEditor') {
+        regionsFeatureCollection = this.createFeatureCollection(market.data.districts)
+      } else {
+        regionsFeatureCollection = this.createFeatureCollection(market.data.starting_points)
+      }
 
-      if (districtsFeatureCollection && !isEmpty((districtsFeatureCollection))) {
-        this.resetFeatures(districtsFeatureCollection)
+      if (regionsFeatureCollection && !isEmpty((regionsFeatureCollection))) {
+        this.resetFeatures(regionsFeatureCollection)
 
         this.map.data.setStyle((feature) => {
           return this.createStyle({
@@ -60,8 +65,8 @@ class MarketsMap extends Component {
       })
     }
 
-    // Selected District Changed
-    if (selectedDistrict && (selectedDistrict !== this.props.selectedDistrict)) {
+    // Selected Region Changed
+    if (selectedRegion && (selectedRegion!== this.props.selectedRegion)) {
       if (selectedFeature && this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
@@ -72,7 +77,7 @@ class MarketsMap extends Component {
           this.handleCancel()
         }
       }
-      const newFeature = this.map.data.getFeatureById(selectedDistrict)
+      const newFeature = this.map.data.getFeatureById(selectedRegion)
       this.map.data.overrideStyle(newFeature, {
         strokeColor: '#3e4444',
         strokeWeight: 3,
@@ -243,26 +248,29 @@ class MarketsMap extends Component {
   }
 
   handleSave = () => {
-    const { formData } = this.props
+    const { formData, selectedRegion, selectedTool } = this.props
     const { selectedFeature } = this.state
-    console.log(formData)
+
     if (this.isFeature(selectedFeature)) {
       this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
-      this.map.data.toGeoJson((geoJsonCollection) => {
-        const currentFeature = find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
-        turf.featureEach(geoJsonCollection, (feature) => {
-          if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
-            const difference = turf.difference(currentFeature, feature)
-            const coordinates = []
-            difference.geometry.coordinates[0].forEach(coord => {
-              coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
-            })
-            const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
-            selectedFeature.setGeometry(polygon)
-          }
+      const difference = this.resolveFeatureCollision(selectedFeature)
+      const payload = {
+        ...formData,
+        geometry: {
+          geom: difference.geometry,
+        },
+        html_color:  difference.properties.color,
+      }
+      console.log(payload)
+      if (selectedTool === 'districtEditor') {
+        this.props.updateDistrict(selectedRegion, payload).then(() => {
+          this.props.handleSaveDone()
         })
-      })
-      this.props.handleSaveDone()
+      } else {
+        this.props.updateStartingPoint(selectedRegion, payload).then(() => {
+          this.props.handleSaveDone()
+        })
+      }
     } else {
       const newFeature = this.map.data.add({
         geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()])
@@ -274,9 +282,51 @@ class MarketsMap extends Component {
         strokeColor: selectedFeature.fillColor,
         fillOpacity: selectedFeature.fillOpacity,
       })
+      window.turf = turf
+      window.n = newFeature
+      const difference = this.resolveFeatureCollision(selectedFeature, turf.feature(newFeature.getGeometry(), { color: selectedFeature.fillColor }))
       selectedFeature.setMap(null)
-      this.props.handleSaveDone()
+
+      const payload = {
+        ...formData,
+        geometry: {
+          geom: difference.geometry,
+        },
+        html_color:  difference.properties.color,
+      }
+
+      console.log(payload)
+      if (selectedTool === 'districtEditor') {
+        this.props.createDistrict(selectedRegion, payload).then(() => {
+          this.props.handleSaveDone()
+        })
+      } else {
+        this.props.createStartingPoint(selectedRegion, payload).then(() => {
+          this.props.handleSaveDone()
+        })
+      }
     }
+  }
+
+  resolveFeatureCollision = (selectedFeature, newFeature) => {
+    let difference
+    let currentFeature
+    this.map.data.toGeoJson((geoJsonCollection) => {
+      turf.featureEach(geoJsonCollection, (feature) => {
+        currentFeature = newFeature ? newFeature : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
+        if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
+          window.f = feature
+          difference = turf.difference(currentFeature, feature)
+          const coordinates = []
+          difference.geometry.coordinates[0].forEach(coord => {
+            coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
+          })
+          const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
+          selectedFeature.setGeometry(polygon)
+        }
+      })
+    })
+    return difference ? difference : currentFeature
   }
 
   handleDelete = () => {

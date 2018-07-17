@@ -22,8 +22,8 @@ class InfoWindow extends Component {
   }
 
   componentDidMount() {
-    if (this.props.district) {
-      const { name, shortname, submarket } = this.props.district
+    if (this.props.region) {
+      const { name, shortname, submarket } = this.props.region
       this.setState({
         name,
         shortname,
@@ -33,8 +33,8 @@ class InfoWindow extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (nextProps.district) {
-      const { name, shortname, submarket } = nextProps.district
+    if (nextProps.region) {
+      const { name, shortname, submarket } = nextProps.region
       this.setState({
         name,
         shortname,
@@ -125,8 +125,8 @@ class InfoWindow extends Component {
   }
 
   handleCancel = () => {
-    if (this.props.district) {
-      const { name, shortname, submarket } = this.props.district
+    if (this.props.region) {
+      const { name, shortname, submarket } = this.props.region
       this.setState({
         name,
         shortname,
@@ -157,13 +157,21 @@ class InfoWindow extends Component {
       shortname,
       submarket,
     } = this.state
-    const formData = {
-      market: market.data.id,
-      name,
-      shortname,
-      submarket,
+    if (!name || !shortname || !submarket) {
+      this.props.notify({
+        message: 'Please fill all form values!',
+        status: 'error',
+        position: 'tc',
+      })
+    } else {
+      const formData = {
+        market: market.data.id,
+        name,
+        shortname,
+        submarket,
+      }
+      this.props.handleSave(formData)
     }
-    this.props.handleSave(formData)
   }
 
   handleConfirm = () => {

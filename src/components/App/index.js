@@ -2,7 +2,14 @@ import React, { Component } from 'react'
 import NotificationsSystem from 'reapop'
 import { connect } from 'react-redux'
 import MarketsMap from '../MarketsMap'
-import { fetchMarkets, fetchMarket } from '../../redux/markets/actions'
+import {
+  fetchMarkets,
+  fetchMarket,
+  updateDistrict,
+  updateStartingPoint,
+  createDistrict,
+  createStartingPoint,
+} from '../../redux/markets/actions'
 import SideDrawer from '../SideDrawer'
 import theme from 'reapop-theme-wybo'
 import { notify } from 'reapop'
@@ -16,7 +23,8 @@ class App extends Component {
     super(props)
     this.state = {
       selectedMarket: 1,
-      selectedDistrict: '',
+      selectedRegion: '',
+      selectedTool: 'districtEditor',
       formData: {},
       editing: false,
       canceling: false,
@@ -42,10 +50,18 @@ class App extends Component {
   }
 
   render() {
-    const { markets, market } = this.props
+    const {
+      markets,
+      market,
+      updateDistrict,
+      updateStartingPoint,
+      createDistrict,
+      createStartingPoint,
+    } = this.props
     const {
       selectedMarket,
-      selectedDistrict,
+      selectedRegion,
+      selectedTool,
       center,
       editing,
       canceling,
@@ -64,7 +80,8 @@ class App extends Component {
           mapElement={<div style={{ height: '100%' }} />}
           center={center}
           market={market}
-          selectedDistrict={selectedDistrict}
+          selectedRegion={selectedRegion}
+          selectedTool={selectedTool}
           handleEdit={this.handleEdit}
           handleClickFeature={this.handleClickFeature}
           clearSelection={this.clearSelection}
@@ -77,12 +94,18 @@ class App extends Component {
           handleDeleteDone={this.handleDeleteDone}
           handleSaveDone={this.handleSaveDone}
           showPolygonInfoWindow={this.showPolygonInfoWindow}
+          updateDistrict={updateDistrict}
+          updateStartingPoint={updateStartingPoint}
+          createDistrict={createDistrict}
+          createStartingPoint={createStartingPoint}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
           selectedMarket={selectedMarket}
-          handleSelectDistrictChange={this.handleSelectDistrictChange}
-          selectedDistrict={selectedDistrict}
+          handleSelectRegionChange={this.handleSelectRegionChange}
+          selectedRegion={selectedRegion}
+          handleSelectToolChange={this.handleSelectToolChange}
+          selectedTool={selectedTool}
           markets={markets}
           market={market}
           loading={markets.loading || market.loading}
@@ -122,23 +145,37 @@ class App extends Component {
     }
   }
 
-  handleSelectDistrictChange = (event) => {
-    const selectedDistrict = event.target.value
-    if (selectedDistrict !== this.state.selectedDistrict) {
+  handleSelectRegionChange = (event) => {
+    const selectedRegion = event.target.value
+    if (selectedRegion !== this.state.selectedRegion) {
       const market = this.props.market
-      const district = find(market.data.districts, ['id', selectedDistrict])
-      const center = turf.center(district.geom)
+      let region
+      if (this.state.selectedTool === 'districtEditor') {
+        region = find(market.data.districts, ['id', selectedRegion])
+      } else {
+        region = find(market.data.starting_points, ['id', selectedRegion])
+      }
+      const center = turf.center(region.geom)
 
       this.setState({
-        selectedDistrict,
+        selectedRegion,
         center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
+      })
+    }
+  }
+
+  handleSelectToolChange = (event) => {
+    const selectedTool = event.target.value
+    if (selectedTool !== this.state.selectedTool) {
+      this.setState({
+        selectedTool,
       })
     }
   }
 
   clearSelection = () => {
     this.setState({
-      selectedDistrict: '',
+      selectedRegion: '',
       editing: false,
     })
   }
@@ -146,7 +183,7 @@ class App extends Component {
   handleClickFeature = (feature) => {
     const featureId = feature.getProperty('id')
     this.setState({
-      selectedDistrict: featureId,
+      selectedRegion: featureId,
     })
   }
 
@@ -173,7 +210,7 @@ class App extends Component {
 
   handleDelete = () => {
     this.setState({
-      selectedDistrict: '',
+      selectedRegion: '',
       editing: false,
       deleting: true,
     })
@@ -248,6 +285,10 @@ const mapDispatchToProps = {
   notify,
   fetchMarkets,
   fetchMarket,
+  updateDistrict,
+  updateStartingPoint,
+  createDistrict,
+  createStartingPoint,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(App)

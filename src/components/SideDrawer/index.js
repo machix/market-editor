@@ -15,14 +15,22 @@ import { find } from 'lodash'
 import InfoWindow from '../InfoWindow'
 
 class SideDrawer extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      loading: false,
+    }
+  }
   render() {
     const {
       selectedMarket,
-      selectedDistrict,
+      selectedRegion,
+      selectedTool,
       markets,
       market,
       handleSelectMarketChange,
-      handleSelectDistrictChange,
+      handleSelectRegionChange,
+      handleSelectToolChange,
       loading,
       handleEdit,
       handleCancel,
@@ -32,17 +40,44 @@ class SideDrawer extends Component {
       showInfoWindow,
     } = this.props
 
-    const districts = market && market.data.districts
-    const district = market && find(market.data.districts, ['id', selectedDistrict])
+    let regions
+    let region
+
+    if (selectedTool === 'districtEditor') {
+      regions = market && market.data.districts
+      region = market && find(market.data.districts, ['id', selectedRegion])
+    } else {
+      regions = market && market.data.starting_points
+      region = market && find(market.data.starting_points, ['id', selectedRegion])
+    }
 
     return (
       <div className={styles.drawer}>
         <List>
           <ListItem>
-            <Logo className={styles.logo} width={32} height={18} />
-            <Typography variant="title">
-              District Editor
-            </Typography>
+            <FormControl classes={{ root: styles.selectRoot }} className={styles.select} disabled={loading}>
+              <Select
+                value={selectedTool}
+                onChange={handleSelectToolChange}
+              >
+                <MenuItem key="districtEditor" value="districtEditor">
+                  <div className={styles.title}>
+                    <Logo className={styles.logo} width={32} height={18} />
+                    <Typography variant="title">
+                      District Editor
+                    </Typography>
+                  </div>
+                </MenuItem>
+                <MenuItem className={styles.title} key="startingPointEditor" value="startingPointEditor">
+                  <div className={styles.title}>
+                    <Logo className={styles.logo} width={30} height={16} />
+                    <Typography variant="title">
+                      Starting Point Editor
+                    </Typography>
+                  </div>
+                </MenuItem>
+              </Select>
+            </FormControl>
           </ListItem>
         </List>
         <Divider />
@@ -65,15 +100,15 @@ class SideDrawer extends Component {
           </ListItem>
           <ListItem>
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
-              {this.renderDistrictSelect({ selectedDistrict, handleSelectDistrictChange, districts })}
-              <FormHelperText>District</FormHelperText>
+              {this.renderRegionSelect({ selectedRegion, handleSelectRegionChange, regions })}
+              <FormHelperText>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</FormHelperText>
             </FormControl>
           </ListItem>
-          {(selectedDistrict || showInfoWindow) &&
+          {(selectedRegion || showInfoWindow) &&
             <div style={{ marginTop: '40px' }}>
               <Divider />
               <ListItem>
-                {this.renderInfoWindow({ market, district, handleEdit, handleCancel, handleSave, handleDelete, editing, showInfoWindow })}
+                {this.renderInfoWindow({ market, region, handleEdit, handleCancel, handleSave, handleDelete, editing, showInfoWindow, selectedTool })}
               </ListItem>
               <Divider />
             </div>
@@ -86,17 +121,17 @@ class SideDrawer extends Component {
     )
   }
 
-  renderDistrictSelect = ({ selectedDistrict, handleSelectDistrictChange, districts }) => {
+  renderRegionSelect = ({ selectedRegion, handleSelectRegionChange, regions }) => {
     return (
       <Select
-        value={selectedDistrict}
-        onChange={handleSelectDistrictChange}
+        value={selectedRegion}
+        onChange={handleSelectRegionChange}
         inputProps={{
           name: 'District',
         }}
       >
-        {!isEmpty(districts) && districts.map((district) => (
-          <MenuItem key={district.id} value={district.id}>{district.name}</MenuItem>
+        {!isEmpty(regions) && regions.map((region) => (
+          <MenuItem key={region.id} value={region.id}>{region.name}</MenuItem>
         ))}
       </Select>
     )
@@ -104,13 +139,14 @@ class SideDrawer extends Component {
 
   renderInfoWindow = ({
     market,
-    district,
+    region,
     handleEdit,
     handleCancel,
     handleSave,
     handleDelete,
     editing,
     showInfoWindow,
+    selectedTool,
   }) => {
     return (
       <InfoWindow
@@ -120,8 +156,9 @@ class SideDrawer extends Component {
         handleSave={handleSave}
         handleDelete={handleDelete}
         market={market}
-        district={district}
+        region={region}
         showInfoWindow={showInfoWindow}
+        selectedTool={selectedTool}
       />
     )
   }

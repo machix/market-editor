@@ -7,9 +7,17 @@ import { makeAsyncActions } from '../../utils'
 export const {
   FETCH_MARKETS,
   FETCH_MARKET,
+  CREATE_DISTRICT,
+  UPDATE_DISTRICT,
+  CREATE_STARTING_POINT,
+  UPDATE_STARTING_POINT,
 } = makeAsyncActions('MARKETS', [
   'FETCH_MARKETS',
   'FETCH_MARKET',
+  'CREATE_DISTRICT',
+  'UPDATE_DISTRICT',
+  'CREATE_STARTING_POINT',
+  'UPDATE_STARTING_POINT',
 ])
 
 // ####################################
@@ -37,6 +45,66 @@ export function fetchMarket(id) {
     payload: {
       request: {
         url:`/v1/region/markets/${id}/?simplified_geom=true`
+      }
+    }
+  }
+}
+
+export function createDistrict(data) {
+  return {
+    types: [
+      ...Object.values(CREATE_DISTRICT)
+    ],
+    payload: {
+      request: {
+        method: 'POST',
+        url:`/v1/region/districts/`,
+        data,
+      }
+    }
+  }
+}
+
+export function updateDistrict(id, data) {
+  return {
+    types: [
+      ...Object.values(UPDATE_DISTRICT)
+    ],
+    payload: {
+      request: {
+        method: 'PATCH',
+        url:`/v1/region/districts/${id}/?simplified_geom=true`,
+        data,
+      }
+    }
+  }
+}
+
+export function createStartingPoint(data) {
+  return {
+    types: [
+      ...Object.values(CREATE_STARTING_POINT)
+    ],
+    payload: {
+      request: {
+        method: 'POST',
+        url:`/v1/region/starting_points/`,
+        data,
+      }
+    }
+  }
+}
+
+export function updateStartingPoint(id, data) {
+  return {
+    types: [
+      ...Object.values(UPDATE_STARTING_POINT)
+    ],
+    payload: {
+      request: {
+        method: 'PATCH',
+        url:`/v1/region/starting_points/${id}/`,
+        data,
       }
     }
   }

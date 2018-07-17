@@ -1,14 +1,19 @@
 .drawer {
-  width: 360px;
+  width: 386px;
 }
 
 .logo {
   margin-right: 15px;
-  margin-left: 25px;
 }
 
 .select {
   width: 100%;
+}
+
+.selectRoot {
+  :global .MuiInput-underline-28:before {
+    border-bottom: none !important;
+  }
 }
 
 .loaderContainer {
@@ -19,4 +24,11 @@
 .main {
   display: flex;
   flex-direction: column;
+}
+
+.title {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 }
