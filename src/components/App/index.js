@@ -190,9 +190,18 @@ class App extends Component {
   }
 
   handleClickFeature = (feature) => {
-    const featureId = feature.getProperty('id')
+    if (feature) {
+      const featureId = feature.getProperty('id')
+      this.setState({
+        selectedRegion: featureId,
+      })
+    } else {
+      this.setState({
+        selectedRegion: '',
+      })
+    }
     this.setState({
-      selectedRegion: featureId,
+      showInfoWindow: false,
     })
   }
 
@@ -220,15 +229,24 @@ class App extends Component {
   handleDelete = (id) => {
     const { selectedTool } = this.state
     if (selectedTool === 'districtEditor') {
-      this.props.deleteDistrict(id)
+      return this.props.deleteDistrict(id).then((response) => {
+        this.setState({
+          selectedRegion: '',
+          editing: false,
+          deleting: true,
+        })
+        return response
+      })
     } else {
-      this.props.deleteStartingPoint(id)
+      return this.props.deleteStartingPoint(id).then((response) => {
+        this.setState({
+          selectedRegion: '',
+          editing: false,
+          deleting: true,
+        })
+        return response
+      })
     }
-    this.setState({
-      selectedRegion: '',
-      editing: false,
-      deleting: true,
-    })
   }
 
   handleDeleteDone = () => {
@@ -248,15 +266,29 @@ class App extends Component {
     })
   }
 
-  handleSaveDone = () => {
+  handleSaveDone = (response) => {
+    const { error } = response
     this.setState({
       saving: false,
     })
-    this.props.notify({
-      message: 'Your changes have been saved!',
-      status: 'success',
-      position: 'tc',
-    })
+    if (error && error.message) {
+      this.setState({
+        selectedRegion: '',
+        showInfoWindow: false,
+        formData: '',
+      })
+      this.props.notify({
+        message: error.message,
+        status: 'error',
+        position: 'tc',
+      })
+    } else {
+      this.props.notify({
+        message: 'Your changes have been saved!',
+        status: 'success',
+        position: 'tc',
+      })
+    }
   }
 
   showPolygonInfoWindow = () => {

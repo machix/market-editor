@@ -11,8 +11,9 @@ import { isEmpty } from 'lodash'
 import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
-import { find, has } from 'lodash'
+import { find } from 'lodash'
 import InfoWindow from '../InfoWindow'
+import classnames from 'classnames'
 
 class SideDrawer extends Component {
   constructor(props) {
@@ -93,7 +94,7 @@ class SideDrawer extends Component {
               >
                 {!isEmpty(markets.data) && markets.data.map((market) => (
                   <MenuItem key={market.id} value={market.id}>
-                    <span className={!market.is_active && styles.inactive}>
+                    <span className={classnames(!market.is_active ? styles.inactive : '')}>
                       {market.name}
                     </span>
                   </MenuItem>
@@ -136,7 +137,7 @@ class SideDrawer extends Component {
       >
         {!isEmpty(regions) && regions.map((region) => (
           <MenuItem key={region.id} value={region.id}>
-            <span className={(has(region, 'is_active') && region.is_active === false) && styles.inactive}>
+            <span className={classnames(region.is_active === false ? styles.inactive : '')}>
               {region.name}
             </span>
           </MenuItem>

@@ -9,7 +9,6 @@ import * as turf from '@turf/turf'
 import DrawingManager from 'react-google-maps/lib/components/drawing/DrawingManager'
 import { MAP } from 'react-google-maps/lib/constants'
 import randomColor from 'random-color'
-import styles from './styles.module.less'
 
 class MarketsMap extends Component {
   constructor(props) {
@@ -190,6 +189,7 @@ class MarketsMap extends Component {
         zIndex: 2,
       })
     } else {
+      this.props.handleClickFeature()
       feature.setOptions({
         strokeColor: '#3e4444',
         strokeWeight: 3,
@@ -204,11 +204,11 @@ class MarketsMap extends Component {
   clearSelection = () => {
     const { selectedFeature } = this.state
     if (selectedFeature) {
-      if (selectedFeature.getProperty('isTemp')) {
-        selectedFeature.setProperty('isTemp', false)
-        this.map.data.remove(selectedFeature)
-      }
       if (this.isFeature(selectedFeature)) {
+        if (selectedFeature.getProperty('isTemp')) {
+          selectedFeature.setProperty('isTemp', false)
+          this.map.data.remove(selectedFeature)
+        }
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
           strokeWeight: 2,
@@ -257,8 +257,6 @@ class MarketsMap extends Component {
   handleEdit = () => {
       const { selectedFeature } = this.state
 
-      this.props.handleEdit()
-
       if (this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, { editable: true, draggable: true })
         this.setState({ oldGeometry: selectedFeature.getGeometry() })
@@ -283,26 +281,30 @@ class MarketsMap extends Component {
     const { formData, selectedRegion, selectedTool } = this.props
     const { selectedFeature } = this.state
 
+    // Editing Existing Region
     if (this.isFeature(selectedFeature)) {
+      selectedFeature.setProperty('isTemp', false)
       this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
-      const difference = this.resolveFeatureCollision(selectedFeature)
+      const result = this.resolveFeatureCollision(selectedFeature)
       const payload = {
         ...formData,
-        geom: difference.geometry,
-        html_color:  difference.properties.color,
+        geom: result.geometry,
+        html_color:  result.properties.color,
       }
       if (selectedTool === 'districtEditor') {
-        this.props.updateDistrict(selectedRegion, payload).then(() => {
-          this.props.handleSaveDone()
+        this.props.updateDistrict(selectedRegion, payload).then((response) => {
+          this.props.handleSaveDone(response)
         })
       } else {
-        this.props.updateStartingPoint(selectedRegion, payload).then(() => {
-          this.props.handleSaveDone()
+        this.props.updateStartingPoint(selectedRegion, payload).then((response) => {
+          this.props.handleSaveDone(response)
         })
       }
     } else {
+      // Create New Region
       const newFeature = this.map.data.add({
-        geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()])
+        geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()]),
+        properties: { color: selectedFeature.fillColor }
       })
       this.map.data.overrideStyle(newFeature, {
         editable: false,
@@ -311,38 +313,59 @@ class MarketsMap extends Component {
         strokeColor: selectedFeature.fillColor,
         fillOpacity: selectedFeature.fillOpacity,
       })
-      // convert coordinates to geoJson
-      let coordinates = []
-      const paths = newFeature.getGeometry().getAt(0).getArray()
-      paths.forEach(coord => {
-        coordinates.push([coord.lng(), coord.lat()])
-      })
-      coordinates = [...coordinates, [...coordinates[0]]]
-      const difference = this.resolveFeatureCollision(selectedFeature, turf.polygon([[...coordinates]], { color: selectedFeature.fillColor }))
+      const result = this.resolveFeatureCollision(selectedFeature, newFeature)
       selectedFeature.setMap(null)
       const payload = {
         ...formData,
-        geom: difference.geometry,
-        html_color:  difference.properties.color,
+        geom: result.geometry,
+        html_color:  result.properties.color,
       }
       if (selectedTool === 'districtEditor') {
-        this.props.createDistrict(payload).then(() => {
-          this.props.handleSaveDone()
+        this.props.createDistrict(payload).then((response) => {
+          if (response.error) {
+            this.map.data.remove(newFeature)
+          }
+          newFeature.setProperty('id', response.payload.data.id)
+          this.map.data.overrideStyle(newFeature, {
+            strokeColor: newFeature.getProperty('color'),
+            strokeWeight: 2,
+            zIndex: 1,
+          })
+          this.setState({ selectedFeature: newFeature})
+          this.props.handleSaveDone(response)
         })
       } else {
-        this.props.createStartingPoint(payload).then(() => {
-          this.props.handleSaveDone()
+        this.props.createStartingPoint(payload).then((response) => {
+          if (response.error) {
+            this.map.data.remove(newFeature)
+          }
+          newFeature.setProperty('id', response.payload.data.id)
+          this.map.data.overrideStyle(newFeature, {
+            strokeColor: newFeature.getProperty('color'),
+            strokeWeight: 2,
+            zIndex: 1,
+          })
+          this.setState({ selectedFeature: newFeature})
+          this.props.handleSaveDone(response)
         })
       }
     }
   }
 
   resolveFeatureCollision = (selectedFeature, newFeature) => {
-    let difference
-    let currentFeature
+    let currentFeature, difference
     this.map.data.toGeoJson((geoJsonCollection) => {
       turf.featureEach(geoJsonCollection, (feature) => {
-        currentFeature = newFeature ? newFeature : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
+        let coordinates = []
+        if (newFeature) {
+          // convert coordinates to GeoJson
+          const paths = newFeature.getGeometry().getAt(0).getArray()
+          paths.forEach(coord => {
+            coordinates.push([coord.lng(), coord.lat()])
+          })
+          coordinates = [...coordinates, [...coordinates[0]]]
+        }
+        currentFeature = newFeature ? turf.polygon([[...coordinates]], { color: selectedFeature.fillColor }) : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
         if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
           difference = turf.difference(currentFeature, feature)
           if (difference) {
@@ -351,7 +374,11 @@ class MarketsMap extends Component {
               coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
             })
             const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
-            selectedFeature.setGeometry(polygon)
+            if (this.isFeature(selectedFeature)) {
+              selectedFeature.setGeometry(polygon)
+            } else {
+              newFeature.setGeometry(polygon)
+            }
           }
         }
       })
