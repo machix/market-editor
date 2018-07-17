@@ -3,6 +3,8 @@ import {
   FETCH_MARKET,
   UPDATE_DISTRICT,
   UPDATE_STARTING_POINT,
+  DELETE_DISTRICT,
+  DELETE_STARTING_POINT,
 } from './actions'
 import { findIndex } from 'lodash'
 
@@ -32,6 +34,7 @@ export const market = (
   },
   action
 ) => {
+  let district, districts, starting_point, starting_points
   switch (action.type) {
     case FETCH_MARKET.IN_PROGRESS:
       return { ...state, loading: true }
@@ -42,8 +45,8 @@ export const market = (
     case UPDATE_DISTRICT.IN_PROGRESS:
       return { ...state, loading: true }
     case UPDATE_DISTRICT.SUCCESS:
-      const district = action.payload.data
-      const districts = [...state.data.districts]
+      district = action.payload.data
+      districts = [...state.data.districts]
       districts.splice(findIndex(districts, { id: district.id }), 1, { ...district })
       return { ...state, data: { ...state.data, districts: [...districts] }, loading: false }
     case UPDATE_DISTRICT.FAIL:
@@ -51,11 +54,29 @@ export const market = (
     case UPDATE_STARTING_POINT.IN_PROGRESS:
       return { ...state, loading: true }
     case UPDATE_STARTING_POINT.SUCCESS:
-      const starting_point = action.payload.data
-      const starting_points = [...state.data.starting_points]
+      starting_point = action.payload.data
+      starting_points = [...state.data.starting_points]
       starting_points.splice(findIndex(starting_points, { id: starting_point.id }), 1, { ...starting_point })
       return { ...state, data: { ...state.data, starting_points: [...starting_points] }, loading: false }
     case UPDATE_STARTING_POINT.FAIL:
+      return { ...state, loading: false }
+    case DELETE_DISTRICT.IN_PROGRESS:
+      return { ...state, loading: true }
+    case DELETE_DISTRICT.SUCCESS:
+      district = action.payload.data
+      districts = [...state.data.districts]
+      districts.splice(findIndex(districts, { id: district.id }), 1, { ...district })
+      return { ...state, data: { ...state.data, districts: [...districts] }, loading: false }
+    case DELETE_DISTRICT.FAIL:
+      return { ...state, loading: false }
+    case DELETE_STARTING_POINT.IN_PROGRESS:
+      return { ...state, loading: true }
+    case DELETE_STARTING_POINT.SUCCESS:
+      starting_point = action.payload.data
+      starting_points = [...state.data.starting_points]
+      starting_points.splice(findIndex(starting_points, { id: starting_point.id }), 1, { ...starting_point })
+      return { ...state, data: { ...state.data, starting_points: [...starting_points] }, loading: false }
+    case DELETE_STARTING_POINT.FAIL:
       return { ...state, loading: false }
     default:
       return state

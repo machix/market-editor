@@ -159,11 +159,16 @@ class App extends Component {
       } else {
         region = find(market.data.starting_points, ['id', selectedRegion])
       }
-      const center = turf.center(region.geom)
+
+      const center = region.geom && turf.center(region.geom)
+      if (center) {
+        this.setState({
+          center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
+        })
+      }
 
       this.setState({
         selectedRegion,
-        center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
       })
     }
   }

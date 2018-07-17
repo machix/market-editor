@@ -28,7 +28,7 @@ class MarketsMap extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    const { market, selectedRegion, selectedTool } = nextProps
+    const { market, selectedRegion, selectedTool, center } = nextProps
     const { selectedFeature } = this.state
 
     // Market Data Changed
@@ -78,7 +78,34 @@ class MarketsMap extends Component {
           this.handleCancel()
         }
       }
-      const newFeature = this.map.data.getFeatureById(selectedRegion)
+      let newFeature = this.map.data.getFeatureById(selectedRegion)
+
+      let region
+      if (selectedTool === 'districtEditor') {
+        region = find(market.data.districts, ['id', selectedRegion])
+      } else {
+        region = find(market.data.starting_points, ['id', selectedRegion])
+      }
+      if (!region.geom) {
+        const size = 0.1
+        const coordinates = [
+          { lat: center.lat + size, lng: center.lng + size },
+          { lat: center.lat + size, lng: center.lng - size },
+          { lat: center.lat - size, lng: center.lng - size },
+          { lat: center.lat - size, lng: center.lng + size },
+          { lat: center.lat + size, lng: center.lng + size },
+        ]
+        const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
+        newFeature = this.map.data.add({
+          geometry: polygon,
+          id: region.id,
+          properties: {
+            id: region.id,
+            isTemp: true,
+            color: randomColor().hexString(),
+          }
+        })
+      }
       this.map.data.overrideStyle(newFeature, {
         strokeColor: '#3e4444',
         strokeWeight: 3,
@@ -177,6 +204,10 @@ class MarketsMap extends Component {
   clearSelection = () => {
     const { selectedFeature } = this.state
     if (selectedFeature) {
+      if (selectedFeature.getProperty('isTemp')) {
+        selectedFeature.setProperty('isTemp', false)
+        this.map.data.remove(selectedFeature)
+      }
       if (this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
