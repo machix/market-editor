@@ -254,11 +254,11 @@ class MarketsMap extends Component {
     if (this.isFeature(selectedFeature)) {
       this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
       const difference = this.resolveFeatureCollision(selectedFeature)
+      window.d = difference
+      window.turf = turf
       const payload = {
         ...formData,
-        geometry: {
-          geom: difference.geometry,
-        },
+        geom: difference.geometry,
         html_color:  difference.properties.color,
       }
       console.log(payload)
@@ -284,14 +284,12 @@ class MarketsMap extends Component {
       })
       window.turf = turf
       window.n = newFeature
-      const difference = this.resolveFeatureCollision(selectedFeature, turf.feature(newFeature.getGeometry(), { color: selectedFeature.fillColor }))
+      // const difference = this.resolveFeatureCollision(selectedFeature, turf.feature(newFeature.getGeometry(), { color: selectedFeature.fillColor }))
       selectedFeature.setMap(null)
-
+      const difference = turf.feature(newFeature.getGeometry(), { color: selectedFeature.fillColor })
       const payload = {
         ...formData,
-        geometry: {
-          geom: difference.geometry,
-        },
+        geom: difference.geometry,
         html_color:  difference.properties.color,
       }
 

@@ -73,7 +73,7 @@ export function updateDistrict(id, data) {
     payload: {
       request: {
         method: 'PATCH',
-        url:`/v1/region/districts/${id}/?simplified_geom=true`,
+        url:`/v1/region/districts/${id}/`,
         data,
       }
     }
