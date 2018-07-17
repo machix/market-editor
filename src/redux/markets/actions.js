@@ -9,15 +9,19 @@ export const {
   FETCH_MARKET,
   CREATE_DISTRICT,
   UPDATE_DISTRICT,
+  DELETE_DISTRICT,
   CREATE_STARTING_POINT,
   UPDATE_STARTING_POINT,
+  DELETE_STARTING_POINT,
 } = makeAsyncActions('MARKETS', [
   'FETCH_MARKETS',
   'FETCH_MARKET',
   'CREATE_DISTRICT',
   'UPDATE_DISTRICT',
+  'DELETE_DISTRICT',
   'CREATE_STARTING_POINT',
   'UPDATE_STARTING_POINT',
+  'DELETE_STARTING_POINT',
 ])
 
 // ####################################
@@ -80,6 +84,28 @@ export function updateDistrict(id, data) {
   }
 }
 
+
+export function deleteDistrict(id) {
+  const data = {
+    geom: {
+      type: 'MultiPolygon',
+      coordinates: [],
+    }
+  }
+  return {
+    types: [
+      ...Object.values(DELETE_DISTRICT)
+    ],
+    payload: {
+      request: {
+        method: 'PATCH',
+        url:`/v1/region/districts/${id}/`,
+        data,
+      }
+    }
+  }
+}
+
 export function createStartingPoint(data) {
   return {
     types: [
@@ -99,6 +125,27 @@ export function updateStartingPoint(id, data) {
   return {
     types: [
       ...Object.values(UPDATE_STARTING_POINT)
+    ],
+    payload: {
+      request: {
+        method: 'PATCH',
+        url:`/v1/region/starting_points/${id}/`,
+        data,
+      }
+    }
+  }
+}
+
+export function deleteStartingPoint(id) {
+  const data = {
+    geom: {
+      type: 'MultiPolygon',
+      coordinates: [],
+    }
+  }
+  return {
+    types: [
+      ...Object.values(DELETE_STARTING_POINT)
     ],
     payload: {
       request: {

@@ -175,7 +175,8 @@ class InfoWindow extends Component {
   }
 
   handleConfirm = () => {
-    this.props.handleDelete()
+    const { region } = this.props
+    this.props.handleDelete(region.id)
     this.handleClose()
     this.props.notify({
       message: 'Delete Successful!',

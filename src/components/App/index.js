@@ -9,6 +9,8 @@ import {
   updateStartingPoint,
   createDistrict,
   createStartingPoint,
+  deleteDistrict,
+  deleteStartingPoint,
 } from '../../redux/markets/actions'
 import SideDrawer from '../SideDrawer'
 import theme from 'reapop-theme-wybo'
@@ -98,6 +100,8 @@ class App extends Component {
           updateStartingPoint={updateStartingPoint}
           createDistrict={createDistrict}
           createStartingPoint={createStartingPoint}
+          deleteDistrict={deleteDistrict}
+          deleteStartingPoint={deleteStartingPoint}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
@@ -208,7 +212,13 @@ class App extends Component {
     }
   }
 
-  handleDelete = () => {
+  handleDelete = (id) => {
+    const { selectedTool } = this.state
+    if (selectedTool === 'districtEditor') {
+      this.props.deleteDistrict(id)
+    } else {
+      this.props.deleteStartingPoint(id)
+    }
     this.setState({
       selectedRegion: '',
       editing: false,
@@ -289,6 +299,8 @@ const mapDispatchToProps = {
   updateStartingPoint,
   createDistrict,
   createStartingPoint,
+  deleteDistrict,
+  deleteStartingPoint,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(App)
