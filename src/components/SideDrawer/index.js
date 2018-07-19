@@ -103,7 +103,7 @@ class SideDrawer extends Component {
             </FormControl>
           </ListItem>
           <ListItem>
-            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
+            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data) || !selectedMarket}>
               {this.renderRegionSelect({ selectedRegion, handleSelectRegionChange, regions })}
               <FormHelperText>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</FormHelperText>
             </FormControl>
