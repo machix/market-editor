@@ -53,9 +53,15 @@ class MarketsMap extends Component {
         })
 
         this.map.data.addListener('click', (event) => {
+          const { selectedFeature } = this.state
           const feature = event.feature
-          this.clearSelection()
-          this.handleClickFeature(feature)
+          if (!this.props.selectedRegion) {
+            this.handleClickFeature(feature)
+          }
+          if (selectedFeature && (selectedFeature.getProperty('id') !== feature.getProperty('id'))) {
+            this.clearSelection()
+            this.handleClickFeature(feature)
+          }
         })
       }
 
@@ -66,7 +72,7 @@ class MarketsMap extends Component {
     }
 
     // Selected Region Changed
-    if (selectedRegion && (selectedRegion!== this.props.selectedRegion)) {
+    if (selectedRegion && (selectedRegion !== this.props.selectedRegion)) {
       if (selectedFeature && this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
@@ -97,7 +103,7 @@ class MarketsMap extends Component {
         const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
         newFeature = this.map.data.add({
           geometry: polygon,
-          id: region.id,
+          idPropertyName: 'id',
           properties: {
             id: region.id,
             isTemp: true,
@@ -304,7 +310,8 @@ class MarketsMap extends Component {
       // Create New Region
       const newFeature = this.map.data.add({
         geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()]),
-        properties: { color: selectedFeature.fillColor }
+        properties: { color: selectedFeature.fillColor, id: 0 },
+        idPropertyName: 'id',
       })
       this.map.data.overrideStyle(newFeature, {
         editable: false,
@@ -366,21 +373,24 @@ class MarketsMap extends Component {
           coordinates = [...coordinates, [...coordinates[0]]]
         }
         currentFeature = newFeature ? turf.polygon([[...coordinates]], { color: selectedFeature.fillColor }) : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
-        if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
-          difference = turf.difference(currentFeature, feature)
-          if (difference) {
-            const coordinates = []
-            difference.geometry.coordinates[0].forEach(coord => {
-              coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
-            })
-            const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
-            if (this.isFeature(selectedFeature)) {
-              selectedFeature.setGeometry(polygon)
-            } else {
-              newFeature.setGeometry(polygon)
-            }
-          }
-        }
+
+        // TODO: Fix region substraction algorithm
+
+        // if (turf.getType(feature) === 'Polygon' && currentFeature.properties.id !== feature.properties.id && turf.booleanOverlap(currentFeature, feature)) {
+        //   difference = turf.difference(currentFeature, feature)
+        //   if (difference) {
+        //     const coordinates = []
+        //     difference.geometry.coordinates[0].forEach(coord => {
+        //       coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
+        //     })
+        //     const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
+        //     if (this.isFeature(selectedFeature)) {
+        //       selectedFeature.setGeometry(polygon)
+        //     } else {
+        //       newFeature.setGeometry(polygon)
+        //     }
+        //   }
+        // }
       })
     })
     return difference ? difference : currentFeature

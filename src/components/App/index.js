@@ -186,15 +186,18 @@ class App extends Component {
     this.setState({
       selectedRegion: '',
       editing: false,
+      showInfoWindow: false,
     })
   }
 
   handleClickFeature = (feature) => {
     if (feature) {
       const featureId = feature.getProperty('id')
-      this.setState({
-        selectedRegion: featureId,
-      })
+      if (this.state.selectedRegion !== featureId) {
+        this.setState({
+          selectedRegion: featureId,
+        })
+      }
     } else {
       this.setState({
         selectedRegion: '',
@@ -252,6 +255,7 @@ class App extends Component {
   handleDeleteDone = () => {
     this.setState({
       deleting: false,
+      showInfoWindow: false,
     })
   }
 
@@ -268,13 +272,9 @@ class App extends Component {
 
   handleSaveDone = (response) => {
     const { error } = response
-    this.setState({
-      saving: false,
-    })
     if (error && error.message) {
       this.setState({
         selectedRegion: '',
-        showInfoWindow: false,
         formData: '',
       })
       this.props.notify({
@@ -283,6 +283,11 @@ class App extends Component {
         position: 'tc',
       })
     } else {
+      this.setState({
+        saving: false,
+        showInfoWindow: false,
+        selectedRegion: response.payload.data.id,
+      })
       this.props.notify({
         message: 'Your changes have been saved!',
         status: 'success',
