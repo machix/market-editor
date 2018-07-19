@@ -35,7 +35,7 @@ export function fetchMarkets() {
     ],
     payload: {
       request: {
-        url:'/v1/region/markets/'
+        url:'/v1/region/markets/?fields=id&fields=name&fields=center&fields=is_active'
       }
     }
   }
