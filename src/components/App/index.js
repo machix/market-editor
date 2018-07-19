@@ -24,7 +24,7 @@ class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      selectedMarket: null,
+      selectedMarket: '',
       selectedRegion: '',
       selectedTool: 'districtEditor',
       formData: {},

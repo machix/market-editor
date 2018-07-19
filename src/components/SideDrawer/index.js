@@ -7,11 +7,10 @@ import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
 import FormHelperText from '@material-ui/core/FormHelperText'
 import FormControl from '@material-ui/core/FormControl'
-import { isEmpty } from 'lodash'
+import { isEmpty, find, sortBy } from 'lodash'
 import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
-import { find } from 'lodash'
 import InfoWindow from '../InfoWindow'
 import classnames from 'classnames'
 
@@ -45,10 +44,10 @@ class SideDrawer extends Component {
     let region
 
     if (selectedTool === 'districtEditor') {
-      regions = market && market.data.districts
+      regions = market && sortBy(market.data.districts, 'name')
       region = market && find(market.data.districts, ['id', selectedRegion])
     } else {
-      regions = market && market.data.starting_points
+      regions = market && sortBy(market.data.starting_points, 'name')
       region = market && find(market.data.starting_points, ['id', selectedRegion])
     }
 
@@ -92,7 +91,7 @@ class SideDrawer extends Component {
                   name: 'Market',
                 }}
               >
-                {!isEmpty(markets.data) && markets.data.map((market) => (
+                {!isEmpty(markets.data) && sortBy(markets.data, 'name').map((market) => (
                   <MenuItem key={market.id} value={market.id}>
                     <span className={classnames(!market.is_active ? styles.inactive : '')}>
                       {market.name}
