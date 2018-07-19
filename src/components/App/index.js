@@ -59,6 +59,7 @@ class App extends Component {
       updateStartingPoint,
       createDistrict,
       createStartingPoint,
+      notify,
     } = this.props
     const {
       selectedMarket,
@@ -102,6 +103,7 @@ class App extends Component {
           createStartingPoint={createStartingPoint}
           deleteDistrict={deleteDistrict}
           deleteStartingPoint={deleteStartingPoint}
+          notify={notify}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
@@ -186,15 +188,18 @@ class App extends Component {
     this.setState({
       selectedRegion: '',
       editing: false,
+      showInfoWindow: false,
     })
   }
 
   handleClickFeature = (feature) => {
     if (feature) {
       const featureId = feature.getProperty('id')
-      this.setState({
-        selectedRegion: featureId,
-      })
+      if (this.state.selectedRegion !== featureId) {
+        this.setState({
+          selectedRegion: featureId,
+        })
+      }
     } else {
       this.setState({
         selectedRegion: '',
@@ -252,6 +257,7 @@ class App extends Component {
   handleDeleteDone = () => {
     this.setState({
       deleting: false,
+      showInfoWindow: false,
     })
   }
 
@@ -267,28 +273,38 @@ class App extends Component {
   }
 
   handleSaveDone = (response) => {
-    const { error } = response
-    this.setState({
-      saving: false,
-    })
-    if (error && error.message) {
-      this.setState({
-        selectedRegion: '',
-        showInfoWindow: false,
-        formData: '',
-      })
-      this.props.notify({
-        message: error.message,
-        status: 'error',
-        position: 'tc',
-      })
-    } else {
-      this.props.notify({
-        message: 'Your changes have been saved!',
-        status: 'success',
-        position: 'tc',
-      })
-    }
+    if (response) {
+      if (response.error && response.error.message) {
+       this.setState({
+         selectedRegion: '',
+         formData: '',
+         saving: false,
+       })
+       this.props.notify({
+         message: response.error.message,
+         status: 'error',
+         position: 'tc',
+       })
+     } else {
+       this.setState({
+         saving: false,
+         editing: false,
+         showInfoWindow: false,
+       }, () => {
+         this.setState({ selectedRegion: '' })
+       })
+       this.props.notify({
+         message: 'Your changes have been saved!',
+         status: 'success',
+         position: 'tc',
+       })
+     }
+   } else {
+     this.setState({
+       saving: false,
+       editing: true,
+     })
+   }
   }
 
   showPolygonInfoWindow = () => {

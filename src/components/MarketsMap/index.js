@@ -4,7 +4,7 @@ import {
   withGoogleMap,
   GoogleMap,
 } from 'react-google-maps'
-import { isEmpty, find } from 'lodash'
+import { isEmpty, find, remove } from 'lodash'
 import * as turf from '@turf/turf'
 import DrawingManager from 'react-google-maps/lib/components/drawing/DrawingManager'
 import { MAP } from 'react-google-maps/lib/constants'
@@ -27,7 +27,7 @@ class MarketsMap extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    const { market, selectedRegion, selectedTool, center } = nextProps
+    const { market, selectedRegion, selectedTool } = nextProps
     const { selectedFeature } = this.state
 
     // Market Data Changed
@@ -53,9 +53,15 @@ class MarketsMap extends Component {
         })
 
         this.map.data.addListener('click', (event) => {
+          const { selectedFeature } = this.state
           const feature = event.feature
-          this.clearSelection()
-          this.handleClickFeature(feature)
+          if (!this.props.selectedRegion) {
+            this.handleClickFeature(feature)
+          }
+          if (selectedFeature && (selectedFeature.getProperty('id') !== feature.getProperty('id'))) {
+            this.clearSelection()
+            this.handleClickFeature(feature)
+          }
         })
       }
 
@@ -66,7 +72,7 @@ class MarketsMap extends Component {
     }
 
     // Selected Region Changed
-    if (selectedRegion && (selectedRegion!== this.props.selectedRegion)) {
+    if (selectedRegion && (selectedRegion !== this.props.selectedRegion)) {
       if (selectedFeature && this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
@@ -77,27 +83,30 @@ class MarketsMap extends Component {
           this.handleCancel()
         }
       }
-      let newFeature = this.map.data.getFeatureById(selectedRegion)
 
+      let newFeature = this.map.data.getFeatureById(selectedRegion)
       let region
+
       if (selectedTool === 'districtEditor') {
         region = find(market.data.districts, ['id', selectedRegion])
       } else {
         region = find(market.data.starting_points, ['id', selectedRegion])
       }
       if (!region.geom) {
-        const size = 0.1
+        const center = this.map.getCenter()
+        const h = 0.1
+        const w = 0.075
         const coordinates = [
-          { lat: center.lat + size, lng: center.lng + size },
-          { lat: center.lat + size, lng: center.lng - size },
-          { lat: center.lat - size, lng: center.lng - size },
-          { lat: center.lat - size, lng: center.lng + size },
-          { lat: center.lat + size, lng: center.lng + size },
+          { lat: center.lat() + w, lng: center.lng() + h },
+          { lat: center.lat() + w, lng: center.lng() - h },
+          { lat: center.lat() - w, lng: center.lng() - h },
+          { lat: center.lat() - w, lng: center.lng() + h },
+          { lat: center.lat() + w, lng: center.lng() + h },
         ]
         const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
         newFeature = this.map.data.add({
           geometry: polygon,
-          id: region.id,
+          idPropertyName: 'id',
           properties: {
             id: region.id,
             isTemp: true,
@@ -235,6 +244,15 @@ class MarketsMap extends Component {
   }
 
   handlePolygonComplete = (polygon) => {
+    if (polygon.getPaths().getAt(0).getArray().length < 4) {
+      this.props.notify({
+        message: 'Polygon must have at least 4 positions.',
+        status: 'error',
+        position: 'tc',
+      })
+      polygon.setMap(null)
+      return
+    }
     const htmlColor = randomColor().hexString()
     polygon.setOptions({
       fillColor: htmlColor,
@@ -285,7 +303,19 @@ class MarketsMap extends Component {
     if (this.isFeature(selectedFeature)) {
       selectedFeature.setProperty('isTemp', false)
       this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
-      const result = this.resolveFeatureCollision(selectedFeature)
+      let result
+      try {
+        result = this.resolveFeatureCollision(selectedFeature)
+      } catch (e) {
+        this.props.notify({
+          message: e.message,
+          status: 'error',
+          position: 'tc',
+        })
+        this.handleCancel()
+        this.props.handleSaveDone()
+        return
+      }
       const payload = {
         ...formData,
         geom: result.geometry,
@@ -302,18 +332,32 @@ class MarketsMap extends Component {
       }
     } else {
       // Create New Region
-      const newFeature = this.map.data.add({
+      const newPolygon = this.map.data.add({
         geometry: new window.google.maps.Data.Polygon([selectedFeature.getPaths().getAt(0).getArray()]),
-        properties: { color: selectedFeature.fillColor }
+        properties: { color: selectedFeature.fillColor, id: 0 },
+        idPropertyName: 'id',
       })
-      this.map.data.overrideStyle(newFeature, {
+      this.map.data.overrideStyle(newPolygon, {
         editable: false,
         draggable: false,
         fillColor: selectedFeature.fillColor,
         strokeColor: selectedFeature.fillColor,
         fillOpacity: selectedFeature.fillOpacity,
       })
-      const result = this.resolveFeatureCollision(selectedFeature, newFeature)
+      let result
+      try {
+        result = this.resolveFeatureCollision(selectedFeature, newPolygon)
+      } catch (e) {
+        this.props.notify({
+          message: e.message,
+          status: 'error',
+          position: 'tc',
+        })
+        selectedFeature.setMap(null)
+        this.map.data.remove(newPolygon)
+        this.props.handleSaveDone()
+        return
+      }
       selectedFeature.setMap(null)
       const payload = {
         ...formData,
@@ -323,65 +367,66 @@ class MarketsMap extends Component {
       if (selectedTool === 'districtEditor') {
         this.props.createDistrict(payload).then((response) => {
           if (response.error) {
-            this.map.data.remove(newFeature)
+            this.map.data.remove(newPolygon)
+          } else {
+            newPolygon.setProperty('id', response.payload.data.id)
+            this.map.data.overrideStyle(newPolygon, {
+              strokeColor: newPolygon.getProperty('color'),
+              strokeWeight: 2,
+              zIndex: 1,
+            })
+            this.setState({ selectedFeature: newPolygon })
           }
-          newFeature.setProperty('id', response.payload.data.id)
-          this.map.data.overrideStyle(newFeature, {
-            strokeColor: newFeature.getProperty('color'),
-            strokeWeight: 2,
-            zIndex: 1,
-          })
-          this.setState({ selectedFeature: newFeature})
           this.props.handleSaveDone(response)
         })
       } else {
         this.props.createStartingPoint(payload).then((response) => {
           if (response.error) {
-            this.map.data.remove(newFeature)
+            this.map.data.remove(newPolygon)
           }
-          newFeature.setProperty('id', response.payload.data.id)
-          this.map.data.overrideStyle(newFeature, {
-            strokeColor: newFeature.getProperty('color'),
+          newPolygon.setProperty('id', response.payload.data.id)
+          this.map.data.overrideStyle(newPolygon, {
+            strokeColor: newPolygon.getProperty('color'),
             strokeWeight: 2,
             zIndex: 1,
           })
-          this.setState({ selectedFeature: newFeature})
+          this.setState({ selectedFeature: newPolygon })
           this.props.handleSaveDone(response)
         })
       }
     }
   }
 
-  resolveFeatureCollision = (selectedFeature, newFeature) => {
+  resolveFeatureCollision = (selectedFeature, newPolygon) => {
     let currentFeature, difference
     this.map.data.toGeoJson((geoJsonCollection) => {
-      turf.featureEach(geoJsonCollection, (feature) => {
-        let coordinates = []
-        if (newFeature) {
-          // convert coordinates to GeoJson
-          const paths = newFeature.getGeometry().getAt(0).getArray()
-          paths.forEach(coord => {
-            coordinates.push([coord.lng(), coord.lat()])
-          })
-          coordinates = [...coordinates, [...coordinates[0]]]
-        }
-        currentFeature = newFeature ? turf.polygon([[...coordinates]], { color: selectedFeature.fillColor }) : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
-        if (turf.getType(feature) === 'Polygon' && turf.booleanOverlap(currentFeature, feature)) {
-          difference = turf.difference(currentFeature, feature)
-          if (difference) {
-            const coordinates = []
-            difference.geometry.coordinates[0].forEach(coord => {
-              coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
-            })
-            const polygon = new window.google.maps.Data.Polygon([[...coordinates]])
-            if (this.isFeature(selectedFeature)) {
-              selectedFeature.setGeometry(polygon)
-            } else {
-              newFeature.setGeometry(polygon)
-            }
+      let newGeoJsonPolygon
+      if (newPolygon) {
+        newGeoJsonPolygon = this.toGeoJsonPolygon(newPolygon)
+      }
+      currentFeature = newGeoJsonPolygon ? newGeoJsonPolygon : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
+      remove(geoJsonCollection.features, f => ((f.id === currentFeature.id) || (f.properties.id === currentFeature.properties.id) || (f.properties.color === currentFeature.properties.color)))
+      const union = turf.union(...geoJsonCollection.features)
+      const unionPolygons = this.toPolygons(union)
+      difference = currentFeature
+      unionPolygons.forEach((polygon) => {
+        if (turf.getType(polygon) === 'Polygon') {
+          if (turf.booleanContains(polygon, currentFeature)) {
+            throw new Error('Polygon must not be contained within another polygon.')
+          }
+          if (turf.booleanOverlap(difference, polygon)) {
+            difference = turf.difference(difference, polygon)
           }
         }
       })
+      if (difference !== currentFeature) {
+        const newDataPolygon = this.toDataPolygon(difference)
+        if (this.isFeature(selectedFeature)) {
+          selectedFeature.setGeometry(newDataPolygon)
+        } else {
+          newPolygon.setGeometry(newDataPolygon)
+        }
+      }
     })
     return difference ? difference : currentFeature
   }
@@ -430,6 +475,34 @@ class MarketsMap extends Component {
   }
 
   isFeature = (feature) => feature instanceof window.google.maps.Data.Feature
+
+  toGeoJsonPolygon = (feature) => {
+    let coordinates = []
+    if (this.isFeature(feature)) {
+      const paths = feature.getGeometry().getAt(0).getArray()
+      paths.forEach(coord => {
+        coordinates.push([coord.lng(), coord.lat()])
+      })
+      coordinates = [...coordinates, [...coordinates[0]]]
+    }
+    return turf.polygon([[...coordinates]], { color: feature.getProperty('color') })
+  }
+
+  toDataPolygon = (geoJson) => {
+    const coordinates = []
+    geoJson.geometry.coordinates[0].forEach(coord => {
+      coordinates.push(new window.google.maps.LatLng(coord[1], coord[0]))
+    })
+    return new window.google.maps.Data.Polygon([[...coordinates]])
+  }
+
+  toPolygons = (multiPolygon) => {
+    const polygons = []
+    multiPolygon.geometry.coordinates.forEach(coords => {
+      polygons.push({ type: 'Polygon', coordinates: coords })
+    })
+    return polygons
+  }
 }
 
 export default withScriptjs(withGoogleMap(MarketsMap))
