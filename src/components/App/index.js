@@ -24,7 +24,7 @@ class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      selectedMarket: 1,
+      selectedMarket: null,
       selectedRegion: '',
       selectedTool: 'districtEditor',
       formData: {},
@@ -310,16 +310,16 @@ class App extends Component {
       }
     })
 
-    this.props.fetchMarket(this.state.selectedMarket)
-    .then(response => {
-      if (response.error) {
-        this.props.notify({
-          message: response.error.message,
-          status: 'error',
-          position: 'tc',
-        })
-      }
-    })
+    // this.props.fetchMarket(this.state.selectedMarket)
+    // .then(response => {
+    //   if (response.error) {
+    //     this.props.notify({
+    //       message: response.error.message,
+    //       status: 'error',
+    //       position: 'tc',
+    //     })
+    //   }
+    // })
   }
 }
 
