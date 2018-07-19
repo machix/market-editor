@@ -59,6 +59,7 @@ class App extends Component {
       updateStartingPoint,
       createDistrict,
       createStartingPoint,
+      notify,
     } = this.props
     const {
       selectedMarket,
@@ -102,6 +103,7 @@ class App extends Component {
           createStartingPoint={createStartingPoint}
           deleteDistrict={deleteDistrict}
           deleteStartingPoint={deleteStartingPoint}
+          notify={notify}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
@@ -271,29 +273,38 @@ class App extends Component {
   }
 
   handleSaveDone = (response) => {
-    const { error } = response
-    if (error && error.message) {
-      this.setState({
-        selectedRegion: '',
-        formData: '',
-      })
-      this.props.notify({
-        message: error.message,
-        status: 'error',
-        position: 'tc',
-      })
-    } else {
-      this.setState({
-        saving: false,
-        showInfoWindow: false,
-        selectedRegion: response.payload.data.id,
-      })
-      this.props.notify({
-        message: 'Your changes have been saved!',
-        status: 'success',
-        position: 'tc',
-      })
-    }
+    if (response) {
+      if (response.error && response.error.message) {
+       this.setState({
+         selectedRegion: '',
+         formData: '',
+         saving: false,
+       })
+       this.props.notify({
+         message: response.error.message,
+         status: 'error',
+         position: 'tc',
+       })
+     } else {
+       this.setState({
+         saving: false,
+         editing: false,
+         showInfoWindow: false,
+       }, () => {
+         this.setState({ selectedRegion: '' })
+       })
+       this.props.notify({
+         message: 'Your changes have been saved!',
+         status: 'success',
+         position: 'tc',
+       })
+     }
+   } else {
+     this.setState({
+       saving: false,
+       editing: true,
+     })
+   }
   }
 
   showPolygonInfoWindow = () => {
