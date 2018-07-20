@@ -7,6 +7,9 @@ import rootReducer from './rootReducer'
 export default function configureStore(initialState = {}) {
   const client = axios.create()
 
+  // const client = axios.create({
+  //   baseURL: process.env.REACT_APP_API_BASE_URL,
+  // })
   // const authToken = localStorage.getItem('authToken')
   // if (authToken) {
   //     client.defaults.headers.common['Authorization'] = `JWT ${authToken}`

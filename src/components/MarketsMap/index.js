@@ -120,6 +120,7 @@ class MarketsMap extends Component {
             color: randomColor().hexString(),
           }
         })
+        this.showPolygonInfoWindow()
       }
       this.map.data.overrideStyle(newFeature, {
         strokeColor: '#3e4444',
@@ -291,11 +292,17 @@ class MarketsMap extends Component {
   handleCancel = () => {
     const { selectedFeature } = this.state
     if (this.isFeature(selectedFeature)) {
-      this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
-      if (this.state.oldGeometry) {
-        selectedFeature.setGeometry(this.state.oldGeometry)
+      if (selectedFeature.getProperty('isTemp')) {
+        selectedFeature.setProperty('isTemp', false)
+        this.map.data.remove(selectedFeature)
+        this.props.handleCancelDone({ closeInfoWindow: true })
+      } else {
+        this.map.data.overrideStyle(selectedFeature, { editable: false, draggable: false })
+        if (this.state.oldGeometry) {
+          selectedFeature.setGeometry(this.state.oldGeometry)
+        }
+        this.props.handleCancelDone()
       }
-      this.props.handleCancelDone()
     } else {
       selectedFeature.setMap(null)
       this.props.handleCancelDone({ closeInfoWindow: true })
