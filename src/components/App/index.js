@@ -134,6 +134,9 @@ class App extends Component {
       this.setState({
         selectedMarket,
         center,
+        editing: false,
+        selectedRegion: '',
+        showInfoWindow: false,
       }, () => {
         this.props.fetchMarket(this.state.selectedMarket)
         .then(response => {
@@ -225,7 +228,10 @@ class App extends Component {
       editing: false,
     })
     if (closeInfoWindow) {
-      this.setState({ showInfoWindow: false })
+      this.setState({
+        selectedRegion: '',
+        showInfoWindow: false
+      })
     }
   }
 
