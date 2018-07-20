@@ -383,14 +383,15 @@ class MarketsMap extends Component {
         this.props.createStartingPoint(payload).then((response) => {
           if (response.error) {
             this.map.data.remove(newPolygon)
+          } else {
+            newPolygon.setProperty('id', response.payload.data.id)
+            this.map.data.overrideStyle(newPolygon, {
+              strokeColor: newPolygon.getProperty('color'),
+              strokeWeight: 2,
+              zIndex: 1,
+            })
+            this.setState({ selectedFeature: newPolygon })
           }
-          newPolygon.setProperty('id', response.payload.data.id)
-          this.map.data.overrideStyle(newPolygon, {
-            strokeColor: newPolygon.getProperty('color'),
-            strokeWeight: 2,
-            zIndex: 1,
-          })
-          this.setState({ selectedFeature: newPolygon })
           this.props.handleSaveDone(response)
         })
       }
@@ -499,7 +500,8 @@ class MarketsMap extends Component {
   toPolygons = (multiPolygon) => {
     const polygons = []
     multiPolygon.geometry.coordinates.forEach(coords => {
-      polygons.push({ type: 'Polygon', coordinates: coords })
+      const coordinates = turf.getType(multiPolygon) === 'MultiPolygon' ? coords : [coords]
+      polygons.push({ type: 'Polygon', coordinates })
     })
     return polygons
   }

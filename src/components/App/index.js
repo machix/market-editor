@@ -101,8 +101,6 @@ class App extends Component {
           updateStartingPoint={updateStartingPoint}
           createDistrict={createDistrict}
           createStartingPoint={createStartingPoint}
-          deleteDistrict={deleteDistrict}
-          deleteStartingPoint={deleteStartingPoint}
           notify={notify}
         />
         <SideDrawer
