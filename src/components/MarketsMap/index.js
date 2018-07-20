@@ -15,7 +15,6 @@ class MarketsMap extends Component {
     super(props)
     this.initialState = {
       oldGeometry: null,
-      features: [],
       selectedFeature: null,
     }
 
@@ -92,7 +91,15 @@ class MarketsMap extends Component {
       } else {
         region = find(market.data.starting_points, ['id', selectedRegion])
       }
-      if (!region.geom) {
+
+      if (region && !region.geom) {
+        // Clear old temp polygon first
+        if (selectedFeature && this.isFeature(selectedFeature)) {
+          if (selectedFeature.getProperty('isTemp')) {
+            selectedFeature.setProperty('isTemp', false)
+            this.map.data.remove(selectedFeature)
+          }
+        }
         const center = this.map.getCenter()
         const h = 0.1
         const w = 0.075
@@ -468,11 +475,10 @@ class MarketsMap extends Component {
   }
 
   resetFeatures = (featureCollection) => {
-    this.state.features.forEach(feature => {
+    this.map.data.forEach(feature => {
       this.map.data.remove(feature)
     })
-    const features = this.map.data.addGeoJson(featureCollection)
-    this.setState({ features: [...features] })
+    this.map.data.addGeoJson(featureCollection)
   }
 
   isFeature = (feature) => feature instanceof window.google.maps.Data.Feature
