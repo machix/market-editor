@@ -183,6 +183,7 @@ class App extends Component {
         selectedTool,
       })
     }
+    this.clearSelection()
   }
 
   clearSelection = () => {

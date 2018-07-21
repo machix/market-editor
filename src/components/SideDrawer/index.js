@@ -7,6 +7,7 @@ import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
 import FormHelperText from '@material-ui/core/FormHelperText'
 import FormControl from '@material-ui/core/FormControl'
+import InputLabel from '@material-ui/core/InputLabel'
 import { isEmpty, find, sortBy } from 'lodash'
 import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
@@ -84,6 +85,7 @@ class SideDrawer extends Component {
         <List className={styles.main}>
           <ListItem>
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
+              <InputLabel>Market</InputLabel>
               <Select
                 value={selectedMarket}
                 onChange={handleSelectMarketChange}
@@ -99,13 +101,19 @@ class SideDrawer extends Component {
                   </MenuItem>
                 ))}
               </Select>
-              <FormHelperText>Market</FormHelperText>
+              {selectedMarket && (<FormHelperText><a href={`/nimda/doordash/market/${selectedMarket}`}>Nimda Link</a></FormHelperText>)}
             </FormControl>
           </ListItem>
           <ListItem>
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data) || !selectedMarket}>
+              <InputLabel>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</InputLabel>
               {this.renderRegionSelect({ selectedRegion, handleSelectRegionChange, regions })}
-              <FormHelperText>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</FormHelperText>
+              {selectedRegion && (
+                <FormHelperText>
+                  <a href={`/nimda/doordash/${selectedTool === 'districtEditor' ? 'district' : 'startingpoint'}/${selectedRegion}`}>
+                    Nimda Link</a>
+                  </FormHelperText>
+              )}
             </FormControl>
           </ListItem>
           {(selectedRegion || showInfoWindow) &&
