@@ -117,7 +117,7 @@ class MarketsMap extends Component {
           properties: {
             id: region.id,
             isTemp: true,
-            color: randomColor().hexString(),
+            color: region.html_color || randomColor().hexString(),
           }
         })
         this.showPolygonInfoWindow()
@@ -162,7 +162,7 @@ class MarketsMap extends Component {
   render() {
     const { center } = this.props
 
-    const FILL_CAPACITY = 0.5
+    const FILL_CAPACITY = 0.65
     const STROKE_CAPACITY = 1
 
     return (

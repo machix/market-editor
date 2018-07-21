@@ -144,6 +144,7 @@ class SideDrawer extends Component {
       >
         {!isEmpty(regions) && regions.map((region) => (
           <MenuItem key={region.id} value={region.id}>
+            <div className={styles.regionSelectColor} style={{ 'backgroundColor': (region.html_color) }}></div>
             <span className={classnames(region.is_active === false ? styles.inactive : '')}>
               {region.name}
             </span>
