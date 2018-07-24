@@ -3,10 +3,12 @@ import {
   withScriptjs,
   withGoogleMap,
   GoogleMap,
+  Marker
 } from 'react-google-maps'
-import { isEmpty, find, remove } from 'lodash'
+import { isEmpty, find, remove, get } from 'lodash'
 import * as turf from '@turf/turf'
 import DrawingManager from 'react-google-maps/lib/components/drawing/DrawingManager'
+import SearchBox from 'react-google-maps/lib/components/places/SearchBox'
 import { MAP } from 'react-google-maps/lib/constants'
 import randomColor from 'random-color'
 
@@ -16,6 +18,8 @@ class MarketsMap extends Component {
     this.initialState = {
       oldGeometry: null,
       selectedFeature: null,
+      markers: [],
+      bounds: null,
     }
 
     this.state = this.initialState
@@ -189,8 +193,64 @@ class MarketsMap extends Component {
           }}
           onPolygonComplete={this.handlePolygonComplete}
         />
+        <SearchBox
+          ref={ref => this.searchBox = ref}
+          bounds={this.state.bounds}
+          controlPosition={window.google.maps.ControlPosition.TOP_LEFT}
+          onPlacesChanged={this.onPlacesChanged}
+        >
+          <input
+            type="text"
+            placeholder="Enter address to drop pin"
+            style={{
+              boxSizing: `border-box`,
+              border: `1px solid transparent`,
+              width: `340px`,
+              height: `32px`,
+              marginTop: `27px`,
+              padding: `0 12px`,
+              borderRadius: `3px`,
+              boxShadow: `0 2px 6px rgba(0, 0, 0, 0.3)`,
+              fontSize: `14px`,
+              outline: `none`,
+              textOverflow: `ellipses`,
+            }}
+          />
+        </SearchBox>
+        {this.state.markers.map((marker, index) =>
+          <Marker key={index} position={marker.position} />
+        )}
       </GoogleMap>
     )
+  }
+  
+  onBoundsChanged = () => {
+    this.setState({
+      bounds: this.map.getBounds(),
+      center: this.map.getCenter(),
+    })
+  }
+
+  onPlacesChanged = () => {
+    const places = this.searchBox.getPlaces();
+    const bounds = new window.google.maps.LatLngBounds();
+
+    places.forEach(place => {
+      if (place.geometry.viewport) {
+        bounds.union(place.geometry.viewport)
+      } else {
+        bounds.extend(place.geometry.location)
+      }
+    });
+    const nextMarkers = places.map(place => ({
+      position: place.geometry.location,
+    }));
+    const nextCenter = get(nextMarkers, '0.position', this.map.center);
+    this.map.panTo(nextCenter)
+    this.setState({
+      markers: nextMarkers,
+    });
+    // this.map.fitBounds(bounds);
   }
 
   resetState = () => {
