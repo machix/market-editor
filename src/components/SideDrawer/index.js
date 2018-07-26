@@ -24,8 +24,8 @@ class SideDrawer extends Component {
   }
   render() {
     const {
-      selectedMarket,
-      selectedRegion,
+      selectedMarketId,
+      selectedRegionId,
       selectedTool,
       markets,
       market,
@@ -46,10 +46,10 @@ class SideDrawer extends Component {
 
     if (selectedTool === 'districtEditor') {
       regions = market && sortBy(market.data.districts, 'name')
-      region = market && find(market.data.districts, ['id', selectedRegion])
+      region = market && find(market.data.districts, ['id', selectedRegionId])
     } else {
       regions = market && sortBy(market.data.starting_points, 'name')
-      region = market && find(market.data.starting_points, ['id', selectedRegion])
+      region = market && find(market.data.starting_points, ['id', selectedRegionId])
     }
 
     return (
@@ -87,7 +87,7 @@ class SideDrawer extends Component {
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
               <InputLabel>Market</InputLabel>
               <Select
-                value={selectedMarket}
+                value={selectedMarketId}
                 onChange={handleSelectMarketChange}
                 inputProps={{
                   name: 'Market',
@@ -101,22 +101,22 @@ class SideDrawer extends Component {
                   </MenuItem>
                 ))}
               </Select>
-              {selectedMarket && (<FormHelperText><a href={`/nimda/doordash/market/${selectedMarket}`}>Nimda Link</a></FormHelperText>)}
+              {selectedMarketId && (<FormHelperText><a href={`/nimda/doordash/market/${selectedMarketId}`}>Nimda Link</a></FormHelperText>)}
             </FormControl>
           </ListItem>
           <ListItem>
-            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data) || !selectedMarket}>
+            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data) || !selectedMarketId}>
               <InputLabel>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</InputLabel>
-              {this.renderRegionSelect({ selectedRegion, handleSelectRegionChange, regions })}
-              {selectedRegion && (
+              {this.renderRegionSelect({ selectedRegionId, handleSelectRegionChange, regions })}
+              {selectedRegionId && (
                 <FormHelperText>
-                  <a href={`/nimda/doordash/${selectedTool === 'districtEditor' ? 'district' : 'startingpoint'}/${selectedRegion}`}>
+                  <a href={`/nimda/doordash/${selectedTool === 'districtEditor' ? 'district' : 'startingpoint'}/${selectedRegionId}`}>
                     Nimda Link</a>
                   </FormHelperText>
               )}
             </FormControl>
           </ListItem>
-          {(selectedRegion || showInfoWindow) &&
+          {(selectedRegionId || showInfoWindow) &&
             <div style={{ marginTop: '40px' }}>
               <Divider />
               <ListItem>
@@ -133,10 +133,10 @@ class SideDrawer extends Component {
     )
   }
 
-  renderRegionSelect = ({ selectedRegion, handleSelectRegionChange, regions }) => {
+  renderRegionSelect = ({ selectedRegionId, handleSelectRegionChange, regions }) => {
     return (
       <Select
-        value={selectedRegion}
+        value={selectedRegionId}
         onChange={handleSelectRegionChange}
         inputProps={{
           name: 'District',

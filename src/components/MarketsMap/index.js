@@ -30,7 +30,7 @@ class MarketsMap extends Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    const { market, selectedRegion, selectedTool } = nextProps
+    const { market, selectedRegionId, selectedTool } = nextProps
     const { selectedFeature } = this.state
 
     // Market Data Changed
@@ -58,7 +58,7 @@ class MarketsMap extends Component {
         this.map.data.addListener('click', (event) => {
           const { selectedFeature } = this.state
           const feature = event.feature
-          if (!this.props.selectedRegion) {
+          if (!this.props.selectedRegionId) {
             this.handleClickFeature(feature)
           }
           if (selectedFeature && (selectedFeature.getProperty('id') !== feature.getProperty('id'))) {
@@ -75,7 +75,7 @@ class MarketsMap extends Component {
     }
 
     // Selected Region Changed
-    if (selectedRegion && (selectedRegion !== this.props.selectedRegion)) {
+    if (selectedRegionId && (selectedRegionId !== this.props.selectedRegionId)) {
       if (selectedFeature && this.isFeature(selectedFeature)) {
         this.map.data.overrideStyle(selectedFeature, {
           strokeColor: selectedFeature.getProperty('color'),
@@ -87,13 +87,13 @@ class MarketsMap extends Component {
         }
       }
 
-      let newFeature = this.map.data.getFeatureById(selectedRegion)
+      let newFeature = this.map.data.getFeatureById(selectedRegionId)
       let region
 
       if (selectedTool === 'districtEditor') {
-        region = find(market.data.districts, ['id', selectedRegion])
+        region = find(market.data.districts, ['id', selectedRegionId])
       } else {
-        region = find(market.data.starting_points, ['id', selectedRegion])
+        region = find(market.data.starting_points, ['id', selectedRegionId])
       }
 
       if (region && !region.geom) {
@@ -370,7 +370,7 @@ class MarketsMap extends Component {
   }
 
   handleSave = () => {
-    const { formData, selectedRegion, selectedTool } = this.props
+    const { formData, selectedRegionId, selectedTool } = this.props
     const { selectedFeature } = this.state
 
     // Editing Existing Region
@@ -396,11 +396,11 @@ class MarketsMap extends Component {
         html_color:  result.properties.color,
       }
       if (selectedTool === 'districtEditor') {
-        this.props.updateDistrict(selectedRegion, payload).then((response) => {
+        this.props.updateDistrict(selectedRegionId, payload).then((response) => {
           this.props.handleSaveDone(response)
         })
       } else {
-        this.props.updateStartingPoint(selectedRegion, payload).then((response) => {
+        this.props.updateStartingPoint(selectedRegionId, payload).then((response) => {
           this.props.handleSaveDone(response)
         })
       }

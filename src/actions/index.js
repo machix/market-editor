@@ -5,7 +5,7 @@ import { makeAsyncActions } from '../utils'
 // ####################################
 
 export const {
-  FETCH_MARKETS,
+  FETCH_MARKET_LIST,
   FETCH_MARKET,
   CREATE_DISTRICT,
   UPDATE_DISTRICT,
@@ -14,7 +14,7 @@ export const {
   UPDATE_STARTING_POINT,
   DELETE_STARTING_POINT,
 } = makeAsyncActions('MARKETS', [
-  'FETCH_MARKETS',
+  'FETCH_MARKET_LIST',
   'FETCH_MARKET',
   'CREATE_DISTRICT',
   'UPDATE_DISTRICT',
@@ -28,10 +28,10 @@ export const {
 // Action Creators
 // ####################################
 
-export function fetchMarkets() {
+export function fetchMarketList() {
   return {
     types: [
-      ...Object.values(FETCH_MARKETS)
+      ...Object.values(FETCH_MARKET_LIST)
     ],
     payload: {
       request: {

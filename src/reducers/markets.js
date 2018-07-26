@@ -1,5 +1,5 @@
 import {
-  FETCH_MARKETS,
+  FETCH_MARKET_LIST,
   FETCH_MARKET,
   CREATE_DISTRICT,
   CREATE_STARTING_POINT,
@@ -10,7 +10,7 @@ import {
 } from '../actions'
 import { findIndex } from 'lodash'
 
-export const markets = (
+export const marketList = (
   state = {
     data: [],
     loading: false,
@@ -18,18 +18,18 @@ export const markets = (
   action
 ) => {
   switch (action.type) {
-    case FETCH_MARKETS.IN_PROGRESS:
+    case FETCH_MARKET_LIST.IN_PROGRESS:
       return { ...state, loading: true }
-    case FETCH_MARKETS.SUCCESS:
+    case FETCH_MARKET_LIST.SUCCESS:
       return { data: [...action.payload.data], loading: false }
-    case FETCH_MARKETS.FAIL:
+    case FETCH_MARKET_LIST.FAIL:
       return { ...state, loading: false }
     default:
       return state
   }
 }
 
-export const market = (
+export const selectedMarket = (
   state = {
     data: {},
     loading: false,
