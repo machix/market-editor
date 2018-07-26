@@ -7,7 +7,7 @@ import {
   UPDATE_STARTING_POINT,
   DELETE_DISTRICT,
   DELETE_STARTING_POINT,
-} from './actions'
+} from '../actions'
 import { findIndex } from 'lodash'
 
 export const markets = (

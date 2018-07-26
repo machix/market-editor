@@ -1,4 +1,4 @@
-import { makeAsyncActions } from '../../utils'
+import { makeAsyncActions } from '../utils'
 
 // ####################################
 // Action Constants

@@ -11,7 +11,7 @@ import {
   createStartingPoint,
   deleteDistrict,
   deleteStartingPoint,
-} from '../../redux/markets/actions'
+} from '../../actions'
 import SideDrawer from '../SideDrawer'
 import theme from 'reapop-theme-wybo'
 import { notify } from 'reapop'
