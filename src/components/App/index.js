@@ -283,17 +283,21 @@ class App extends Component {
 
   handleSaveDone = (response) => {
     if (response) {
-      if (response.error && response.error.message) {
-       this.setState({
-         selectedRegionId: '',
-         formData: '',
-         saving: false,
-       })
-       this.props.notify({
-         message: response.error.message,
-         status: 'error',
-         position: 'tc',
-       })
+      if (response.error) {
+        this.setState({
+          selectedRegionId: '',
+          formData: '',
+          saving: false,
+        })
+        let errorMessage = 'Unknown error has occured. Please refresh the page'
+        if (response.error.message) {
+          errorMessage = response.error.message
+        }
+        this.props.notify({
+          message: errorMessage,
+          status: 'error',
+          position: 'tc',
+        })
      } else {
        this.setState({
          saving: false,

@@ -29,7 +29,7 @@ export const marketList = (
   }
 }
 
-export const market = (
+export const selectedMarket = (
   state = {
     data: {},
     loading: false,
