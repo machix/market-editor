@@ -481,10 +481,10 @@ class MarketsMap extends Component {
       }
       currentFeature = newGeoJsonPolygon ? newGeoJsonPolygon : find(geoJsonCollection.features, ['properties.id', selectedFeature.getProperty('id')])
       remove(geoJsonCollection.features, f => ((f.id === currentFeature.id) || (f.properties.id === currentFeature.properties.id) || (f.properties.color === currentFeature.properties.color)))
-      const union = turf.union(...geoJsonCollection.features)
-      const unionPolygons = this.toPolygons(union)
+
       difference = currentFeature
-      unionPolygons.forEach((polygon) => {
+      geoJsonCollection.features.forEach((feature) => {
+        const polygon = feature.geometry
         if (turf.getType(polygon) === 'Polygon') {
           if (turf.booleanContains(polygon, currentFeature)) {
             throw new Error('Polygon must not be contained within another polygon.')
