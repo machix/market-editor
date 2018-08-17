@@ -1,9 +1,9 @@
 import { reducer as notificationsReducer } from 'reapop'
 import { combineReducers } from 'redux'
-import { markets, market } from './markets/reducers'
+import { marketList, selectedMarket } from './markets'
 
 export default combineReducers({
   notifications: notificationsReducer(),
-  markets,
-  market,
+  marketList,
+  selectedMarket,
 })

@@ -2,12 +2,10 @@ import { compose, createStore, applyMiddleware } from 'redux'
 import axios from 'axios'
 import axiosMiddleware from 'redux-axios-middleware'
 import thunk from 'redux-thunk'
-import rootReducer from './rootReducer'
+import rootReducer from '../reducers'
 
 export default function configureStore(initialState = {}) {
-  const client = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL,
-  })
+  const client = axios.create()
 
   const authToken = localStorage.getItem('authToken')
   if (authToken) {

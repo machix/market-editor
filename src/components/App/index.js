@@ -1,15 +1,18 @@
 import React, { Component } from 'react'
+import PropTypes from 'prop-types'
 import NotificationsSystem from 'reapop'
 import { connect } from 'react-redux'
 import MarketsMap from '../MarketsMap'
 import {
-  fetchMarkets,
+  fetchMarketList,
   fetchMarket,
   updateDistrict,
   updateStartingPoint,
   createDistrict,
   createStartingPoint,
-} from '../../redux/markets/actions'
+  deleteDistrict,
+  deleteStartingPoint,
+} from '../../actions'
 import SideDrawer from '../SideDrawer'
 import theme from 'reapop-theme-wybo'
 import { notify } from 'reapop'
@@ -19,11 +22,24 @@ import * as turf from '@turf/turf'
 
 
 class App extends Component {
+  static propTypes = {
+    marketList: PropTypes.object,
+    selectedMarket: PropTypes.object, 
+    fetchMarketList: PropTypes.func.isRequired,
+    fetchMarket: PropTypes.func.isRequired,
+    updateDistrict: PropTypes.func.isRequired,
+    updateStartingPoint: PropTypes.func.isRequired,
+    createDistrict: PropTypes.func.isRequired,
+    createStartingPoint: PropTypes.func.isRequired,
+    deleteDistrict: PropTypes.func.isRequired,
+    deleteStartingPoint: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props)
     this.state = {
-      selectedMarket: 1,
-      selectedRegion: '',
+      selectedMarketId: '',
+      selectedRegionId: '',
       selectedTool: 'districtEditor',
       formData: {},
       editing: false,
@@ -36,31 +52,22 @@ class App extends Component {
   }
 
   componentDidMount() {
-    const authToken = localStorage.getItem('authToken')
-
-    if (!authToken) {
-      this.props.notify({
-        message: 'No authentication token found!',
-        status: 'error',
-        position: 'tc',
-      })
-    }
-
     this.loadData()
   }
 
   render() {
     const {
-      markets,
-      market,
+      marketList,
+      selectedMarket,
       updateDistrict,
       updateStartingPoint,
       createDistrict,
       createStartingPoint,
+      notify,
     } = this.props
     const {
-      selectedMarket,
-      selectedRegion,
+      selectedMarketId,
+      selectedRegionId,
       selectedTool,
       center,
       editing,
@@ -79,8 +86,8 @@ class App extends Component {
           containerElement={<div style={{ height: '100vh', width: '100%' }} />}
           mapElement={<div style={{ height: '100%' }} />}
           center={center}
-          market={market}
-          selectedRegion={selectedRegion}
+          market={selectedMarket}
+          selectedRegionId={selectedRegionId}
           selectedTool={selectedTool}
           handleEdit={this.handleEdit}
           handleClickFeature={this.handleClickFeature}
@@ -98,17 +105,18 @@ class App extends Component {
           updateStartingPoint={updateStartingPoint}
           createDistrict={createDistrict}
           createStartingPoint={createStartingPoint}
+          notify={notify}
         />
         <SideDrawer
           handleSelectMarketChange={this.handleSelectMarketChange}
-          selectedMarket={selectedMarket}
+          selectedMarketId={selectedMarketId}
           handleSelectRegionChange={this.handleSelectRegionChange}
-          selectedRegion={selectedRegion}
+          selectedRegionId={selectedRegionId}
           handleSelectToolChange={this.handleSelectToolChange}
           selectedTool={selectedTool}
-          markets={markets}
-          market={market}
-          loading={markets.loading || market.loading}
+          markets={marketList}
+          market={selectedMarket}
+          loading={marketList.loading || selectedMarket.loading}
           editing={editing}
           handleEdit={this.handleEdit}
           handleCancel={this.handleCancel}
@@ -122,16 +130,19 @@ class App extends Component {
   }
 
   handleSelectMarketChange = (event) => {
-    const selectedMarket = event.target.value
-    if (selectedMarket !== this.state.selectedMarket) {
-      const market = find(this.props.markets.data, ['id', selectedMarket])
+    const selectedMarketId = event.target.value
+    if (selectedMarketId !== this.state.selectedMarketId) {
+      const market = find(this.props.marketList.data, ['id', selectedMarketId])
       const center = market.center ? { lat: market.center.coordinates[1], lng: market.center.coordinates[0] } : this.state.center
 
       this.setState({
-        selectedMarket,
+        selectedMarketId,
         center,
+        editing: false,
+        selectedRegionId: '',
+        showInfoWindow: false,
       }, () => {
-        this.props.fetchMarket(this.state.selectedMarket)
+        this.props.fetchMarket(this.state.selectedMarketId)
         .then(response => {
           if (response.error) {
             this.props.notify({
@@ -146,20 +157,25 @@ class App extends Component {
   }
 
   handleSelectRegionChange = (event) => {
-    const selectedRegion = event.target.value
-    if (selectedRegion !== this.state.selectedRegion) {
-      const market = this.props.market
+    const selectedRegionId = event.target.value
+    if (selectedRegionId !== this.state.selectedRegionId) {
+      const market = this.props.selectedMarket
       let region
       if (this.state.selectedTool === 'districtEditor') {
-        region = find(market.data.districts, ['id', selectedRegion])
+        region = find(market.data.districts, ['id', selectedRegionId])
       } else {
-        region = find(market.data.starting_points, ['id', selectedRegion])
+        region = find(market.data.starting_points, ['id', selectedRegionId])
       }
-      const center = turf.center(region.geom)
+
+      const center = region.geom && turf.center(region.geom)
+      if (center) {
+        this.setState({
+          center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
+        })
+      }
 
       this.setState({
-        selectedRegion,
-        center: { lat: center.geometry.coordinates[1] , lng: center.geometry.coordinates[0] },
+        selectedRegionId,
       })
     }
   }
@@ -171,19 +187,32 @@ class App extends Component {
         selectedTool,
       })
     }
+    this.clearSelection()
   }
 
   clearSelection = () => {
     this.setState({
-      selectedRegion: '',
+      selectedRegionId: '',
       editing: false,
+      showInfoWindow: false,
     })
   }
 
   handleClickFeature = (feature) => {
-    const featureId = feature.getProperty('id')
+    if (feature) {
+      const featureId = feature.getProperty('id')
+      if (this.state.selectedRegionId !== featureId) {
+        this.setState({
+          selectedRegionId: featureId,
+        })
+      }
+    } else {
+      this.setState({
+        selectedRegionId: '',
+      })
+    }
     this.setState({
-      selectedRegion: featureId,
+      showInfoWindow: false,
     })
   }
 
@@ -204,21 +233,40 @@ class App extends Component {
       editing: false,
     })
     if (closeInfoWindow) {
-      this.setState({ showInfoWindow: false })
+      this.setState({
+        selectedRegionId: '',
+        showInfoWindow: false
+      })
     }
   }
 
-  handleDelete = () => {
-    this.setState({
-      selectedRegion: '',
-      editing: false,
-      deleting: true,
-    })
+  handleDelete = (id) => {
+    const { selectedTool } = this.state
+    if (selectedTool === 'districtEditor') {
+      return this.props.deleteDistrict(id).then((response) => {
+        this.setState({
+          selectedRegionId: '',
+          editing: false,
+          deleting: true,
+        })
+        return response
+      })
+    } else {
+      return this.props.deleteStartingPoint(id).then((response) => {
+        this.setState({
+          selectedRegionId: '',
+          editing: false,
+          deleting: true,
+        })
+        return response
+      })
+    }
   }
 
   handleDeleteDone = () => {
     this.setState({
       deleting: false,
+      showInfoWindow: false,
     })
   }
 
@@ -233,15 +281,43 @@ class App extends Component {
     })
   }
 
-  handleSaveDone = () => {
-    this.setState({
-      saving: false,
-    })
-    this.props.notify({
-      message: 'Your changes have been saved!',
-      status: 'success',
-      position: 'tc',
-    })
+  handleSaveDone = (response) => {
+    if (response) {
+      if (response.error) {
+        this.setState({
+          selectedRegionId: '',
+          formData: '',
+          saving: false,
+        })
+        let errorMessage = 'Unknown error has occured. Please refresh the page'
+        if (response.error.message) {
+          errorMessage = response.error.message
+        }
+        this.props.notify({
+          message: errorMessage,
+          status: 'error',
+          position: 'tc',
+        })
+     } else {
+       this.setState({
+         saving: false,
+         editing: false,
+         showInfoWindow: false,
+       }, () => {
+         this.setState({ selectedRegionId: '' })
+       })
+       this.props.notify({
+         message: 'Your changes have been saved!',
+         status: 'success',
+         position: 'tc',
+       })
+     }
+   } else {
+     this.setState({
+       saving: false,
+       editing: true,
+     })
+   }
   }
 
   showPolygonInfoWindow = () => {
@@ -252,18 +328,7 @@ class App extends Component {
   }
 
   loadData = () => {
-    this.props.fetchMarkets()
-    .then(response => {
-      if (response.error) {
-        this.props.notify({
-          message: response.error.message,
-          status: 'error',
-          position: 'tc',
-        })
-      }
-    })
-
-    this.props.fetchMarket(this.state.selectedMarket)
+    this.props.fetchMarketList()
     .then(response => {
       if (response.error) {
         this.props.notify({
@@ -277,18 +342,20 @@ class App extends Component {
 }
 
 const mapStateToProps = state => ({
-  markets: state.markets,
-  market: state.market,
+  marketList: state.marketList,
+  selectedMarket: state.selectedMarket,
 })
 
 const mapDispatchToProps = {
   notify,
-  fetchMarkets,
+  fetchMarketList,
   fetchMarket,
   updateDistrict,
   updateStartingPoint,
   createDistrict,
   createStartingPoint,
+  deleteDistrict,
+  deleteStartingPoint,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(App)

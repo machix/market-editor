@@ -7,12 +7,13 @@ import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
 import FormHelperText from '@material-ui/core/FormHelperText'
 import FormControl from '@material-ui/core/FormControl'
-import { isEmpty } from 'lodash'
+import InputLabel from '@material-ui/core/InputLabel'
+import { isEmpty, find, sortBy } from 'lodash'
 import LoadingCircle from '../LoadingCircle'
 import Logo from '../Logo'
 import styles from './styles.module.less'
-import { find } from 'lodash'
 import InfoWindow from '../InfoWindow'
+import classnames from 'classnames'
 
 class SideDrawer extends Component {
   constructor(props) {
@@ -23,8 +24,8 @@ class SideDrawer extends Component {
   }
   render() {
     const {
-      selectedMarket,
-      selectedRegion,
+      selectedMarketId,
+      selectedRegionId,
       selectedTool,
       markets,
       market,
@@ -44,11 +45,11 @@ class SideDrawer extends Component {
     let region
 
     if (selectedTool === 'districtEditor') {
-      regions = market && market.data.districts
-      region = market && find(market.data.districts, ['id', selectedRegion])
+      regions = market && sortBy(market.data.districts, 'name')
+      region = market && find(market.data.districts, ['id', selectedRegionId])
     } else {
-      regions = market && market.data.starting_points
-      region = market && find(market.data.starting_points, ['id', selectedRegion])
+      regions = market && sortBy(market.data.starting_points, 'name')
+      region = market && find(market.data.starting_points, ['id', selectedRegionId])
     }
 
     return (
@@ -84,27 +85,38 @@ class SideDrawer extends Component {
         <List className={styles.main}>
           <ListItem>
             <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
+              <InputLabel>Market</InputLabel>
               <Select
-                value={selectedMarket}
+                value={selectedMarketId}
                 onChange={handleSelectMarketChange}
                 inputProps={{
                   name: 'Market',
                 }}
               >
-                {!isEmpty(markets.data) && markets.data.map((market) => (
-                  <MenuItem key={market.id} value={market.id}>{market.name}</MenuItem>
+                {!isEmpty(markets.data) && sortBy(markets.data, 'name').map((market) => (
+                  <MenuItem key={market.id} value={market.id}>
+                    <span className={classnames(!market.is_active ? styles.inactive : '')}>
+                      {market.name}
+                    </span>
+                  </MenuItem>
                 ))}
               </Select>
-              <FormHelperText>Market</FormHelperText>
+              {selectedMarketId && (<FormHelperText><a href={`/nimda/doordash/market/${selectedMarketId}`}>Nimda Link</a></FormHelperText>)}
             </FormControl>
           </ListItem>
           <ListItem>
-            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data)}>
-              {this.renderRegionSelect({ selectedRegion, handleSelectRegionChange, regions })}
-              <FormHelperText>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</FormHelperText>
+            <FormControl className={styles.select} disabled={loading || isEmpty(markets.data) || !selectedMarketId}>
+              <InputLabel>{selectedTool === 'districtEditor' ? 'District' : 'Starting Point'}</InputLabel>
+              {this.renderRegionSelect({ selectedRegionId, handleSelectRegionChange, regions })}
+              {selectedRegionId && (
+                <FormHelperText>
+                  <a href={`/nimda/doordash/${selectedTool === 'districtEditor' ? 'district' : 'startingpoint'}/${selectedRegionId}`}>
+                    Nimda Link</a>
+                  </FormHelperText>
+              )}
             </FormControl>
           </ListItem>
-          {(selectedRegion || showInfoWindow) &&
+          {(selectedRegionId || showInfoWindow) &&
             <div style={{ marginTop: '40px' }}>
               <Divider />
               <ListItem>
@@ -121,17 +133,22 @@ class SideDrawer extends Component {
     )
   }
 
-  renderRegionSelect = ({ selectedRegion, handleSelectRegionChange, regions }) => {
+  renderRegionSelect = ({ selectedRegionId, handleSelectRegionChange, regions }) => {
     return (
       <Select
-        value={selectedRegion}
+        value={selectedRegionId}
         onChange={handleSelectRegionChange}
         inputProps={{
           name: 'District',
         }}
       >
         {!isEmpty(regions) && regions.map((region) => (
-          <MenuItem key={region.id} value={region.id}>{region.name}</MenuItem>
+          <MenuItem key={region.id} value={region.id}>
+            <div className={styles.regionSelectColor} style={{ 'backgroundColor': (region.html_color) }}></div>
+            <span className={classnames(region.is_active === false ? styles.inactive : '')}>
+              {region.name}
+            </span>
+          </MenuItem>
         ))}
       </Select>
     )
